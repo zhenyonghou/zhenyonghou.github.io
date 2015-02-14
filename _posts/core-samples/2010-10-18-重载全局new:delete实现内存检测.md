@@ -10,7 +10,7 @@
 当然，不光要重载operator new 和 operator delete, 还要重载operator new [], operator delete []，更多operator new和operator delete重载的内容参考《Effective C++》
 重载的new/delete, new[]/delete[]代码如下：
 
-{% highlight ruby %}
+{% highlight c++ %}
 void * operator new (size_t size){
 if(0 == size){
         return 0;
