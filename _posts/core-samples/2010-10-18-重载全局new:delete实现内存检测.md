@@ -10,27 +10,27 @@
 当然，不光要重载operator new 和 operator delete, 还要重载operator new [], operator delete []，更多operator new和operator delete重载的内容参考《Effective C++》
 重载的new/delete, new[]/delete[]代码如下：
 
-{% highlight c++ %}
+{% highlight %}
 void * operator new (size_t size){
-if(0 == size){
+    if(0 == size){
         return 0;
-}
-void *p = malloc(size);
-return p;
+    }
+    void *p = malloc(size);
+    return p;
 }
  
 void * operator new [](size_t size){
-return operator new(size);
+    return operator new(size);
 }
  
 void operator delete (void * pointer){
-if(0 != pointer){
-free(pointer);
-}
+    if(0 != pointer){
+    free(pointer);
+    }
 }
  
 void operator delete[](void * pointer){
-       operator delete(pointer);
+    operator delete(pointer);
 }
 {% endhighlight %}
 
