@@ -1,0 +1,375 @@
+---
+layout: post
+date:   2012-12-08 23:05
+categories: c++
+---
+
+自从了解了C++11之后，感觉boost库越来越鸡肋了。下面说一下C++11的新特性。
+
+C++11的新特性，可以分为两部分，第一部分是C++11核心语言的特性，第二部分是STL标准库的新特性。学习C++11主要参考了wiki上的一篇文章，在介绍右值引用的时候还参考了MSDN上一篇文章，由于这两篇文章写的时间比较早，和实际有些出入，我的开发环境是win8，vs2012，很多C++11特性还没支持，所以只整理了vs2012已经支持了的特性。
+
+## 第一部分：核心语言的特性
+
+### 一. 右值引用，move语义，完美转发
+1. 左值（lvalue）和右值（rvalue）的概念
+ 
+c++11引入一种新式引用，名曰右值引用，语法：Type&& , const Type&&，区别于之前的&标示的左值引用。为理解右值引用，先要理解左值和右值的概念。
+
+左值，在表达式中，表达式结束时候不会消失，如：obj , *ptr , ptr[index] , ++x
+
+右值，在表达式中，是临时的，表达式结束就会“蒸发”，如：1729 , x + y , std::string("meow") , x++ 
+
+区分左值和右值，还有另一种方法：能否取得其地址。
+
+如果能取得其地址，是左值，如：&obj , &*ptr , &ptr[index] , &++x是合法的，是左值；
+
+如果不能取得其地址，是右值，如：&1729 , &(x + y) , &std::string("meow") , &x++ 都是不合法的，是右值。
+
+不管是左值还是右值，它要么是modifiable的，要么是const的，如下：
+
+string one("cute");
+
+const string two("fluffy");
+
+string three() { return "kittens"; }
+
+const string four() { return "are an essential part of a healthy diet"; }
+
+one;     // modifiable lvalue
+
+two;     // const lvalue
+
+three(); // modifiable rvalue
+
+four();  // const rvalue
+
+2. 左值引用和右值引用的绑定特性
+
+左值引用和右值引用各包含modifiable value和const value，故可以分为4种引用形式：
+
+modifiable lvalue reference
+
+const lvalue reference
+
+modifiable rvalue reference
+
+const rvalue reference
+
+下面这个示例是测试4种引用的绑定特性，每种引用都试图绑定这4种引用的值。
+
+{% highlight cpp %}
+
+#include <iostream>  
+using namespace std;  
+  
+// 测试左值引用和右值引用的绑定特性  
+/** 
+ * 左值引用和右值引用各包含modifiable value和const value，故可以分为4种引用形式： 
+ * 1. modifiable lvalue reference 
+ * 2. const lvalue reference 
+ * 3. modifiable rvalue reference 
+ * 4. const rvalue reference 
+ * 下面这个示例是测试4种引用的绑定特性，每种引用都试图绑定这4种引用的值。 
+*/  
+  
+string modifiable_rvalue() {  
+    return "cute";  
+}  
+   
+const string const_rvalue() {  
+    return "fluffy";  
+}  
+  
+int main() {  
+    string modifiable_lvalue("kittens");  
+    const string const_lvalue("hungry hungry zombies");  
+   
+    // A: testing modifiable lvalue reference  
+    string& a = modifiable_lvalue;  
+    string& b = const_lvalue;             // cannot convert from 'const std::string' to 'std::string &'  
+    string& c = modifiable_rvalue();  
+    string& d = const_rvalue();           // cannot convert from 'const std::string' to 'std::string &'  
+   
+    // B: testing const lvalue reference  
+    const string& e = modifiable_lvalue;  
+    const string& f = const_lvalue;  
+    const string& g = modifiable_rvalue();  
+    const string& h = const_rvalue();  
+   
+    // C: testing modifiable rvalue reference  
+    string&& i = modifiable_lvalue;     // cannot convert from 'std::string' to 'std::string &&'  
+    string&& j = const_lvalue;          // cannot convert from 'const std::string' to 'std::string &&'  
+    string&& k = modifiable_rvalue();  
+    string&& l = const_rvalue();            // cannot convert from 'const std::string' to 'std::string &&'  
+   
+    // D: testing const rvalue reference  
+    const string&& m = modifiable_lvalue;   // cannot convert from 'std::string' to 'const std::string &&'  
+    const string&& n = const_lvalue;        // cannot convert from 'const std::string' to 'const std::string &&'  
+    const string&& o = modifiable_rvalue();  
+    const string&& p = const_rvalue();  
+  
+    return 0;  
+}  
+
+{% endhighlight %}
+
+通过上面例子得出的结论：
+1） 左值引用和右值引用: modifiable references不能绑定const修饰的值.
+2.）右值引用不能绑定左值引用，无论是否const修饰的值.
+
+利用重载函数检查自动绑定：
+
+{% highlight cpp %}
+
+#include <iostream>  
+#include <string>  
+using namespace std;  
+  
+// 利用重载函数检查自动绑定  
+  
+void meow(string& s) {  
+    cout << "meow(string&): " << s << endl;  
+}  
+   
+void meow(const string& s) {  
+    cout << "meow(const string&): " << s << endl;  
+}  
+  
+void meow(string&& s) {  
+    cout << "meow(string&&): " << s << endl;  
+}  
+  
+void meow(const string&& s) {  
+    cout << "meow(const string&&): " << s << endl;  
+}  
+  
+string rvalue_func() {  
+    return "rvalue_func()";  
+}  
+  
+const string const_rvalue_func() {  
+    return "const_rvalue_func()";  
+}  
+  
+int main() {  
+    string lvalue("lvalue");  
+    const string const_lvalue("const_lvalue");  
+   
+    meow(lvalue);  
+    meow(const_lvalue);  
+    meow(rvalue_func());  
+    meow(const_rvalue_func());  
+  
+    return 0;  
+}  
+
+{% endhighlight %}
+
+运行结果：
+meow(string&): lvalue
+meow(const string&): const_lvalue
+meow(string&&): rvalue_func()
+meow(const string&&): const_rvalue_func()
+请按任意键继续. . .
+有个值得注意的地方：当有 const Type& 和 Type&& 重载时，modifiable rvalues bind to Type&&，其他的都bind to const Type&.
+
+
+3. Move语义
+std::move是获得右值的方式，通过move可以将左值转为右值。
+
+{% highlight cpp %}
+
+#include <iostream>  
+#include <utility>  
+#include <string>  
+#include <vector>  
+using namespace std;  
+  
+int main()  
+{  
+    std::string str = "Hello";  
+    std::vector<std::string> v;  
+   
+    // uses the push_back(const T&) overload, which means   
+    // we'll incur the cost of copying str  
+    v.push_back(str);  
+    std::cout << "After copy, str is \"" << str << "\"\n";  
+   
+    // uses the rvalue reference push_back(T&&) overload,   
+    // which means no strings will copied; instead, the contents  
+    // of str will be moved into the vector.  This is less  
+    // expensive, but also means str might now be empty.  
+    v.push_back(std::move(str));  
+    std::cout << "After move, str is \"" << str << "\"\n";  
+   
+    std::cout << "The contents of the vector are \"" << v[0] << "\", \"" << v[1] << "\"\n";  
+}  
+
+{% endhighlight %}
+
+运行结果：
+After copy, str is "Hello"
+After move, str is ""
+The contents of the vector are "Hello", "Hello"
+
+在 C++11，一个std::vector的 "move 构造函数" 对某个vector的右值引用可以单纯地从右值复制其内部 C-style 数组的指针到新的 vector，然后留下空的右值。这个操作不需要数组的复制，而且空的暂时对象的解构也不会摧毁存储器。传回vector暂时对象的函数只需要传回std::vector<T>&&。如果vector没有 move 构造函数，那么复制构造函数将被调用，以const std::vector<T> &的正常形式。 如果它确实有 move 构造函数，那么就会调用 move 构造函数，这能够免除大幅的存储器配置。 
+
+### 二. 类型推导
+
+有被明确初始化的变量可以使用 auto 关键字
+使用auto可以减少冗余代码,举例而言，程序员不用写像下面这样：
+
+{% highlight cpp %}
+for (vector<int>::const_iterator itr = myvec.cbegin(); itr != myvec.cend(); ++itr)  
+{% endhighlight %}
+而可以用更简短的
+
+{% highlight cpp %}
+for (auto itr = myvec.cbegin(); itr != myvec.cend(); ++itr)  
+{% endhighlight %}
+
+这里的cbegin()和cend也是c++11新加入的，因为begin()，和end()函数在容器中都有两个，一个返回iterator，
+另一个返回const_iterator，因为有auto关键字，编译器将右值推导成哪个不明确，所以对容器内容只读时推荐使用cbegin()和cend()
+
+### 三. 以范围为基础的 for 循环
+for 语句将允许简单的范围迭代：
+
+{% highlight cpp %}
+int my_array[5] = {1, 2, 3, 4, 5};  
+for (int &x : my_array)  
+{  
+  x *= 2;  
+}  
+{% endhighlight %}
+
+### 四. Lambda函数与表示式
+在调用C++标准程序库算法函数诸如算法函数诸如sort和find_if时候，第3个参数往往需要输入一个函数对象，既麻烦又冗赘，
+还好C++11有了Lambda的支持，举例而言，程序员不用写像下面这样：
+
+{% highlight cpp %}
+// 查找字符串长度是5的Data  
+struct Cmpare  
+{  
+    Cmpare(int n) : len_(n)  
+    {}  
+  
+    bool operator()(const Data& d)  
+    {  
+        return (d.data_.length() == len_);  
+    }  
+  
+private:  
+    int len_;  
+};  
+vector<Data>::iterator it = std::find_if(my_vec.begin(), my_vec.end(), Cmpare(5));  
+
+{% endhighlight %}
+
+而可以用Lambda函数代替:
+
+{% highlight cpp %}
+int find_len = 5;  
+it = std::find_if(my_vec.begin(), my_vec.end(), [find_len](const Data& d) {  
+    return (d.data_.length() == find_len);  
+});  
+
+{% endhighlight %}
+
+Lambda函数体内需要什么变量，就在方括号中指明，方括号内容的含义：
+
+[] // 沒有定义任何参数。使用未定义参数会导致错误。
+
+[x, &y] // x 以传值方式传入，y 以传引用方式传入。
+
+[&] // 任何被使用到的外部参数皆以引用方式使用。
+
+[=] // 任何被使用到的外部参数皆以传值方式使用。
+
+[&, x] // x 显式地以传值方式加以使用。其余参数以传入方式使用。
+
+[=, &z] // z 显式地以引用方式加以使用。其余参数以传值方式使用。
+
+在成员函数中指涉对象的 this 指针，必须要显式的传入 lambda 函数， 否则成员函数中的 lambda 函数无法使用任何该对象的变量或函数。
+
+[this]() { this->SomePrivateMemberFunction(); };
+
+### 五. 显示虚函数重载 override final关键字
+为防止子类重载的函数与基类函数不一致的情况发生,在编译期期捕获倒错误，语法如下：
+
+{% highlight cpp %}
+struct Base {  
+    virtual void some_func(float);  
+};  
+   
+struct Derived : Base {  
+    virtual void some_func(int) override;   // Error: Derive::some_func 并没有 override Base::some_func  
+    virtual void some_func(float) override; // OK：显示重载  
+};  
+{% endhighlight %}
+
+C++11也提供关键字final，用来避免类被继承，或是基类的函数被改写：
+
+{% highlight cpp %}
+struct Base1 final { };  
+  
+struct Derived1 : Base1 { }; // Error: class Base1 以标明为 final  
+  
+struct Base2 {  
+    virtual void f() final;  
+};  
+  
+struct Derived2 : Base2 {  
+    void f(); // Error: Base2::f 以标明为 final  
+};  
+{% endhighlight %}
+
+### 六. 空指针
+C++11 引入了新的关键字来代表空指针常数：nullptr
+
+{% highlight cpp %}
+char* pc = nullptr;     // OK  
+int * pi = nullptr;     // OK  
+int    i = nullptr;     // error  
+   
+foo(nullptr);           // 呼叫 foo(char *)  
+
+{% endhighlight %}
+
+这部分先介绍到这里，C++11给程序员带来了不少实惠，在这些新特性里我最喜爱的依次是：右值引用，Lambda表达式，auto关键字，虽然现在项目组还在用VS2005开发程序，但我已经迫不及待地自己使用C++11了。
+
+## 第二部分：标准库的变更
+这部分我想简单提一下，具体写出来不是一两遍博客可以完成的，再说也没必要，可以参考cppReference上详细的说明。
+
+### 1. 线程支持
+
+标准库提供了std::thread，还提供了线程同步的锁（如std::mutex，std::recursive_mutex），可以 RAII 锁 (std::lock_guard 和 std::unique_lock)。
+
+### 2. 多元组
+
+还记得boost库中的tuple了吗？现在已经引入到了C++11
+
+{% highlight cpp %}
+// 多元组类别  
+std::tuple<int, std::string, float> Person(12, "amy", 30.1f);  
+int id = std::get<0>(Person);  
+std::string name = std::get<1>(Person);       // "amy" 
+
+{% endhighlight %} 
+
+### 3. 正则表达式
+
+### 4. 智能指针
+
+std::shared_ptr不用说了，boost库里有的，unique_ptr我想和boost::scoped_ptr一样使用就行了吧，头文件<memory>
+
+### 5. 包装引用
+
+std::ref，将值转成引用
+
+
+
+
+作者 [侯振永][1]     
+写于2012 年 12月 8日
+
+[1]: https://zhenyonghou.github.io/

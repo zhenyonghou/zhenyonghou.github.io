@@ -1,0 +1,213 @@
+---
+layout: post
+date:   2012-09-23 20:46
+categories: c++
+---
+
+### 一．准备工作
+Sqlite官网地址：http://www.sqlite.org，截止目前的最新版本：3.7.14。
+
+下载Sqlite源码及对应版本的文档：sqlite-amalgamation-3071400.zip，sqlite-doc-3071400.zip
+
+解压源码压缩包，释放出4个文件：shell.c sqlite3.c sqlite3.h sqlite3ext.h
+开始编译！（windows平台，vs2005）
+
+首先用vs建一个工程，我的目标是编译成lib，所以建一个静态库工程，工程建好后将解压出来的4个文件加入工程，编译，生成lib文件。
+
+编译选项：
+
+关于编译选项的设置compile.html文档中有介绍，选项很多，慢慢看。
+
+其中有一个SQLITE_THREADSAFE=<0 or 1 or 2>选项决定了多线程环境下的安全问题，
+
+0 多线程不安全。
+
+1 多线程安全。
+
+2 可以在多线程中使用，但多线程之间不能共享database connection和任何从其派生的prepared statements。
+
+默认SQLITE_THREADSAFE=1
+
+如果使用的是别人编译好的dll或lib，自己不知道编译选项里设置的值，别着急，可以调用sqlite3_threadsafe()取得设置。
+
+还可以调用sqlite3_config()修改设置。
+ 
+### 二．使用SQLite3的C/C++接口
+两个常用的对象：
+The database connection object: sqlite3
+The prepared statement object: sqlite3_stmt
+ 
+常用的接口：
+
+#### sqlite3_open()
+
+通常这个函数被第一个调用，这个操作打开一个数据库文件的链接，输出一个database connection对象，database connection对象在调用之后的接口时使用。
+函数原型：
+
+int sqlite3_open(
+ const char *filename,   /*Database filename (UTF-8) */
+ sqlite3 **ppDb          /* OUT:SQLite db handle */
+);
+
+int sqlite3_open16(
+ const void *filename,   /*Database filename (UTF-16) */
+ sqlite3 **ppDb          /* OUT:SQLite db handle */
+);
+
+int sqlite3_open_v2(
+  constchar *filename,   /* Database filename(UTF-8) */
+ sqlite3 **ppDb,         /* OUT:SQLite db handle */
+  intflags,              /* Flags */
+ const char *zVfs        /* Name ofVFS module to use */
+);
+
+通过filename参数指定要打开的数据库，sqlite3_open()和sqlite3_open_v2()的filename参数是utf8编码格式，sqlite3_open16()的filename参数是UTF-16编码。
+如果成功，sqlite3*被创建，返回值SQLITE_OK，如果失败，返回错误码，调用sqlite3_errmsg() 或 sqlite3_errmsg16()将得到错误信息。
+无论成功与否， database connection句柄资源已经被分配，在不使用时应该将数据库连接句柄传递给sqlite3_close()释放资源。
+ 
+sqlite3_open_v2的第三个参数，有3个值和其他的值（SQLITE_OPEN_NOMUTEX, SQLITE_OPEN_FULLMUTEX, SQLITE_OPEN_SHAREDCACHE,SQLITE_OPEN_PRIVATECACHE, and/or SQLITE_OPEN）组合：
+
+SQLITE_OPEN_READONLY
+
+SQLITE_OPEN_READWRITE
+
+SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE
+
+如何不是用上面的3个值之一和其他值组合，其行为是未定义的。
+ 
+#### sqlite3_prepare()
+
+这个操作第一个参数输入database connection对象，第二个参数输入sql语句，该接口将输入的sql语句转变成prepared statement对象，输出prepared statement对象，在调用之后的接口时使用，记住，这个函数不执行sql语句，只为执行sql做准备。
+
+函数原型：
+
+int sqlite3_prepare(
+ sqlite3 *db,            /*Database handle */
+ const char *zSql,       /* SQLstatement, UTF-8 encoded */
+  intnByte,              /* Maximum length ofzSql in bytes. */
+ sqlite3_stmt **ppStmt,  /* OUT:Statement handle */
+ const char **pzTail     /* OUT:Pointer to unused portion of zSql */
+);
+
+int sqlite3_prepare_v2(
+ sqlite3 *db,            /*Database handle */
+ const char *zSql,       /* SQLstatement, UTF-8 encoded */
+  intnByte,              /* Maximum length of zSql in bytes. */
+ sqlite3_stmt **ppStmt,  /* OUT:Statement handle */
+ const char **pzTail     /* OUT:Pointer to unused portion of zSql */
+);
+
+int sqlite3_prepare16(
+ sqlite3 *db,            /*Database handle */
+ const void *zSql,       /* SQLstatement, UTF-16 encoded */
+  intnByte,              /* Maximum length ofzSql in bytes. */
+ sqlite3_stmt **ppStmt,  /* OUT:Statement handle */
+ const void **pzTail     /* OUT:Pointer to unused portion of zSql */
+);
+
+int sqlite3_prepare16_v2(
+ sqlite3 *db,            /*Database handle */
+ const void *zSql,       /* SQLstatement, UTF-16 encoded */
+  intnByte,              /* Maximum length ofzSql in bytes. */
+ sqlite3_stmt **ppStmt,  /* OUT:Statement handle */
+  const void **pzTail     /* OUT: Pointer to unused portion of zSql*/
+);
+ 
+#### sqlite3_step()
+
+这个操作执行sqlite3_prepare()接口返回的prepared statement，如果是SELECT操作，结果集的第一行将被返回，如果想得到第二行，还须再调用一次该函数，也就是每调用一次返回一行，直到完成。
+有些操作仅需调用1次该函数，如：INSERT, UPDATE, DELETE语句。
+使用老接口得到的statement，执行sqlite3_step返回SQLITE_BUSY, SQLITE_DONE, SQLITE_ROW, SQLITE_ERROR, or SQLITE_MISUSE；
+使用v2接口得到的statement，执行sqlite3_step返回任意的result code或extended result codes。
+ 
+#### sqlite3_column()
+
+sqlite3接口并没有sqlite3_column()函数，这里所说的是一组函数：
+sqlite3_column_blob()
+sqlite3_column_bytes()
+sqlite3_column_bytes16()
+sqlite3_column_count()
+sqlite3_column_double()
+sqlite3_column_int()
+sqlite3_column_int64()
+sqlite3_column_text()
+sqlite3_column_text16()
+sqlite3_column_type()
+sqlite3_column_value()
+这个操作输入执行过sqlite3_step()的prepared statement对象，返回单列的结果，要得到一行中全部列的值需要调用多次这个函数。
+ 
+#### sqlite3_finalize()
+
+销毁之前调用sqlite3_prepare()创建的prepared statement，prepared statement必须由该函数销毁，否则会导致内存泄露。
+ 
+#### sqlite3_close()
+
+关闭之前调用sqlite3_open()创建的database connection，在调用该函数之前，必须保证所有的prepared statements都被finalized。
+ 
+#### 开发SQLite应用一般的流程：
+首先用sqlite3_open()创建一个数据库连接，该函数根据输入参数可以打开一个已存在的数据库，也可以创建一个新的数据库文件。不用数据库的时候记得调用 sqlite3_close() 关闭数据库连接。
+执行一个SQL statement，有以下步骤：
+
+1. 调用sqlite3_prepare()创建 preparedstatement。
+
+2. 调用sqlite3_step()一次或多次执行preparedstatement。
+
+3. 对于查询操作，在两次sqlite3_step()之间调用sqlite3_column()获取结果。
+
+4. 调用sqlite3_finalize()销毁preparedstatement。
+ 
+在调用 sqlite3_step()之后，可以调用sqlite3_reset()初始化prepared statement。
+很多时候，每次调用的sql语句都是相似的，比如使用INSERT语句，每次执行只是插入不同的值，为了适应这种灵活性，SQLite允许SQL statements带参数，在执行statements前给这些参数绑定一个值，绑定的值在 prepared statement第二次执行的时候还可以改变。
+ 
+获得错误信息的函数：
+int sqlite3_errcode(sqlite3 *db);
+int sqlite3_extended_errcode(sqlite3 *db);
+const char *sqlite3_errmsg(sqlite3*);
+const void *sqlite3_errmsg16(sqlite3*);
+ 
+### 三．SQLite3的线程模式
+
+sqlite支持3种不同的线程模式：
+
+Single-thread：这种模式下，所有的互斥被禁用，多线程使用sqlite是不安全的。
+
+Multi-thread：这种模式下，sqlite可以安全地用于多线程，但多个线程不能共享一个database connect。
+
+Serialized：这种模式下，sqlite可以安全地用于多线程，无限制。
+ 
+sqlite线程模式的选择可以在编译时（当SQLitelibrary 源码被编译时）或启动时（使用SQLite的应用初始化时）或运行时（新的 database connection被创建时）。
+
+一般来说，运行时覆盖启动时，启动时覆盖编译时，不过，Single-thread模式一旦被选择了，就不能被重改。
+ 
+编译时设置线程模式：
+
+用SQLITE_THREADSAFE选择线程模式，
+
+如果SQLITE_THREADSAFE没有被设置或设置了-DSQLITE_THREADSAF=1，则是Serialized模式；
+
+如果设置了-DSQLITE_THREADSAF=0，线程模式是Single-thread；
+
+如果设置了-DSQLITE_THREADSAF=2，线程模式是Multi-thread.
+ 
+启动时设置线程模式：
+假设编译时线程模式被设置为非Single-thread模式，在初始化时可以调用sqlite3_config()改变线程模式，参数可以为SQLITE_CONFIG_SINGLETHREA，SQLITE_CONFIG_MULTITH，SQLITE_CONFIG_SERIALIZED.
+ 
+运行时设置线程模式：
+如果Single-thread模式在编译时和启动时都没被设置，则可以在database connections被创建时设置Multi-thread或Serialized模式，但不可以降级设置为Single-thread模式，也不可以升级编译时或启动时设置的Single-thread模式。
+sqlite3_open_v2()的第三个参数决定单个databaseconnection的线程模式，SQLITE_OPEN_NOMUTEX使database connection为Multi-thread模式，SQLITE_OPEN_FULLMUTE使database connection为Serialized模式。
+
+如果不指定模式或使用sqlite3_open()或sqlite3_open16()接口，线程模式为编译时或启动时设置的模式。
+
+### 四．其它需要注意的
+
+1. 如果需要用sqlite的*16函数(e.g. sqlite3_prepare16) ，需要传入 UTF-16 (i.e. wstring) 参数，一定要用 2*wcslen 作为字符穿长度传入，否则会被截断。
+
+2. 对多个表同时操作时，为每个表建一个connection要比共享connection好，减小了冲突的可能性。
+
+
+
+
+作者 [侯振永][1]     
+写于2012 年 9月 23日
+
+[1]: https://zhenyonghou.github.io/
