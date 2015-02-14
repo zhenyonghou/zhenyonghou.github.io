@@ -1,0 +1,293 @@
+---
+layout: post
+date:   2012-06-12 22:48
+categories: c++
+---
+
+上一篇介绍了函数指针的基本用法，本篇看一下函数指针的应用。很多时候遇到的都是C函数的callback，下面示例展示C++中使用callback。
+
+
+模板类，该类拥有2个成员，一个是对象指针，一个是成员函数，成员函数必须无参，无返回值。
+
+{% highlight cpp %}
+struct CallbackAction {  
+  virtual void Execute() = 0;  
+  virtual ~CallbackAction() {}  
+};  
+  
+template <class OBJECT, class METHOD>  
+struct CallbackMethodAction : public CallbackAction {  
+  OBJECT  *object;  
+  METHOD   method;  
+  
+  void Execute() { (object->*method)(); }  
+  
+  CallbackMethodAction(OBJECT *object, METHOD method) : object(object), method(method) {}  
+}; 
+{% endhighlight %} 
+
+为使用起来方便，进一步封装。
+
+{% highlight cpp %}
+class Callback{  
+public:  
+  explicit Callback(CallbackAction  *newaction) { action = newaction; }  
+  Callback() { action = NULL; }  
+  ~Callback();  
+  Callback(const Callback& c);  
+  Callback& operator=(const Callback& c);    
+  void Execute() const    { if(action) action->Execute(); }  
+  void operator()() const { Execute(); }  
+  
+private:  
+  CallbackAction *action;  
+};  
+  
+Callback::Callback(const Callback& c)  
+{  
+  action = c.action;  
+}  
+  
+Callback::~Callback()  
+{  
+}  
+  
+Callback& Callback::operator=(const Callback& c)  
+{  
+  action = c.action;  
+  return *this;  
+}  
+{% endhighlight %}
+
+为调用方便，再增加一个接口函数，注意，这里进行了new操作，没有delete，会造成内存泄露，本例没有处理内存问题，解决这个问题，可以再Callback类里添加计数器，管理指针。
+
+{% highlight cpp %}
+template <class OBJECT, class METHOD>  
+Callback callback(OBJECT *object, void (METHOD::*method)()) {  
+  return Callback(new CallbackMethodAction<OBJECT, void (METHOD::*)()>(object, method));  
+}  
+{% endhighlight %}
+看一下如何应用
+
+{% highlight cpp %}
+class Girl  
+{  
+public:  
+  void Shopping()  
+  {  
+    cout << "I want to shopping" << endl;  
+    WhenShopping();  
+  }  
+  
+  Callback WhenShopping;  
+};  
+  
+class Boy  
+{  
+public:  
+  void Bind(Girl* girl)  
+  {  
+    girl->WhenShopping = callback(this, &Boy::OnShopping);  
+  }  
+  
+private:  
+  void OnShopping()   {cout << "I know she is shopping" << endl;}  
+};  
+{% endhighlight %}
+
+客户端调用
+
+{% highlight cpp %}
+void main()  
+{  
+  Girl girl;  
+  Boy boy;  
+  boy.Bind(&girl);  
+  
+  girl.Shopping();  
+} 
+{% endhighlight %} 
+
+输出结果：
+
+I want to shopping
+
+I know she is shopping
+上面的的代码只是个callback使用的雏形，没有处理内存问题和由const修饰的参数问题，直接使用会有内存泄露。另外，如果需要带参数的函数指针类型，需要再扩展。 
+
+下面是带1个参数和带2个参数的函数指针类型的应用，更多参数的函数指针这里就不再展示了。
+
+{% highlight cpp %}
+template <class P1>  
+struct Callback1Action {  
+  virtual void Execute(P1 p1) = 0;  
+  virtual ~Callback1Action() {}  
+};  
+  
+template <class OBJECT, class METHOD, class P1>  
+struct Callback1MethodAction : public Callback1Action<P1> {  
+  OBJECT  *object;  
+  METHOD   method;  
+  
+  void Execute(P1 p1) { (object->*method)(p1); }  
+  
+  Callback1MethodAction(OBJECT *object, METHOD method) : object(object), method(method) {}  
+};  
+  
+template <class P1>  
+class Callback1{  
+public:  
+  explicit Callback1(Callback1Action <P1> *newaction) { action = newaction; }  
+  Callback1() { action = NULL; }  
+  ~Callback1();  
+  
+  Callback1& operator=(const Callback1& c);  
+  Callback1(const Callback1& c);  
+  
+  void Execute(P1 p1) const      { if(action) action->Execute(p1); }  
+  void operator()(P1 p1) const   { Execute(p1); }  
+  
+private:  
+  Callback1Action<P1> *action;  
+};  
+  
+template <class P1>  
+Callback1<P1>& Callback1<P1>::operator=(const Callback1& c)  
+{  
+  action = c.action;  
+  return *this;  
+}  
+  
+template <class P1>  
+Callback1<P1>::Callback1(const Callback1& c)  
+{  
+  action = c.action;  
+}  
+  
+template <class P1>  
+Callback1<P1>::~Callback1()  
+{  
+}  
+  
+// 接口函数  
+template <class OBJECT, class METHOD, class P1>  
+Callback1<P1> callback(OBJECT *object, void (METHOD::*method)(P1 p1)) {  
+  return Callback1<P1>(new Callback1MethodAction<OBJECT, void (METHOD::*)(P1 p1), P1>(object, method));  
+}  
+{% endhighlight %}
+
+{% highlight cpp %}
+template <class P1, class P2>  
+struct Callback2Action {  
+  virtual void Execute(P1 p1, P2 p2) = 0;  
+  virtual ~Callback2Action() {}  
+};  
+  
+template <class OBJECT, class METHOD, class P1, class P2>  
+struct Callback2MethodAction : public Callback2Action<P1, P2> {  
+  OBJECT  *object;  
+  METHOD   method;  
+  
+  void Execute(P1 p1, P2 p2) { (object->*method)(p1, p2); }  
+  
+  Callback2MethodAction(OBJECT *object, METHOD method) : object(object), method(method) {}  
+};  
+  
+template <class P1, class P2>  
+class Callback2{  
+public:  
+  explicit Callback2(Callback2Action <P1, P2> *newaction) { action = newaction; }  
+  Callback2() { action = NULL; }  
+  ~Callback2();  
+  
+  Callback2& operator=(const Callback2& c);  
+  Callback2(const Callback2& c);  
+  
+  void Execute(P1 p1, P2 p2) const     { if(action) action->Execute(p1, p2); }  
+  void operator()(P1 p1, P2 p2) const  { Execute(p1, p2); }  
+  
+private:  
+  Callback2Action<P1, P2> *action;  
+};  
+  
+template <class P1, class P2>  
+Callback2<P1, P2>& Callback2<P1, P2>::operator=(const Callback2& c)  
+{  
+  action = c.action;  
+  return *this;  
+}  
+  
+template <class P1, class P2>  
+Callback2<P1, P2>::Callback2(const Callback2& c)  
+{  
+  action = c.action;  
+}  
+  
+template <class P1, class P2>  
+Callback2<P1, P2>::~Callback2()  
+{  
+}  
+  
+template <class OBJECT, class METHOD, class P1, class P2>  
+Callback2<P1, P2> callback(OBJECT *object, void (METHOD::*method)(P1 p1, P2 p2)) {  
+  return Callback2<P1, P2>(new Callback2MethodAction<OBJECT, void (METHOD::*)(P1 p1, P2 p2), P1, P2>(object, method));  
+}  
+{% endhighlight %}
+
+应用代码
+
+{% highlight cpp %}
+class Girl  
+{  
+public:  
+  void Shopping()  
+  {  
+    cout << "I want to shopping" << endl;  
+    WhenShopping();  
+  
+    WhenBuy("fruits");  
+  
+    WhenBuy("chocolate");  
+  
+    WhenPay(20, 16);  
+  }  
+  
+  void Swimming()  
+  {  
+    cout << "I want to swimming" << endl;  
+    WhenSwimming();  
+  }  
+  
+  Callback WhenShopping;  
+  Callback WhenSwimming;  
+  Callback1<string> WhenBuy;  
+  Callback2<int, int> WhenPay;  
+};  
+  
+class Boy  
+{  
+public:  
+  void Bind(Girl* girl)  
+  {  
+    girl->WhenShopping = callback(this, &Boy::OnShopping);  
+    girl->WhenSwimming = callback(this, &Boy::OnSwimming);  
+    girl->WhenBuy = callback(this, &Boy::OnBuy);  
+    girl->WhenPay = callback(this, &Boy::OnPay);  
+  }  
+  
+private:  
+  void OnShopping()   {cout << "I know she is shopping" << endl;}  
+  void OnSwimming()   {cout << "I know she is swimming" << endl;}  
+  void OnBuy(string thing) {cout << "She buy " << thing << endl;}  
+  void OnPay(int a, int b) {cout << "She pay " << a << " " << b << endl;}  
+};  
+
+{% endhighlight %}
+
+（完）
+
+
+作者 [侯振永][1]     
+写于2012 年 6月 12日
+
+[1]: https://zhenyonghou.github.io/

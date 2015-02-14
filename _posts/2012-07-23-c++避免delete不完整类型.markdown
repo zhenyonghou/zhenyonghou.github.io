@@ -1,0 +1,78 @@
+---
+layout: post
+date:   2012-07-23 23:10
+categories: c++
+---
+
+在C++中，delete一个类型不完整的类对象的指针,编译器会发出警告，不幸的是，程序员有时候会忽略这种警告。在下面的例子中，main函数里new了一个类指针，调用delete_obj函数delete企图这个指针,delete_obj函数定义在del.h文件中，然而delete_obj函数只能“看见”Object类的声明，不能“看见”其定义。运行的结果发现Object析构没被调用。
+
+{% highlight cpp %}
+// filename : object.h  
+  
+class Object  
+{  
+public:  
+  Object();  
+  ~Object();  
+};  
+{% endhighlight %}
+
+{% highlight cpp %}
+// filename : object.cpp  
+#include <stdio.h>  
+#include "object.h"  
+  
+Object::Object()  
+{  
+  printf("%s\n", "A::A()");  
+}  
+  
+Object::~Object()  
+{  
+  printf("%s\n", "A::~A()");  
+}  
+{% endhighlight %}
+
+{% highlight cpp %}
+// filename : del.h  
+class Object;  
+  
+void delete_obj(Object* obj) { delete obj; }  
+{% endhighlight %}
+
+{% highlight cpp %}
+// main.cpp  
+#include "del.h"  
+#include "object.h"  
+int main()  
+{    
+  Object *obj = new Object;  
+  delete_obj(obj);  
+}  
+{% endhighlight %}
+
+解决方法：
+下面是boost::checked_delete的实现，在Boost Utility库中，如果T只声明了而未定义，sizeof(T)将返回0，此时checked_delete将因为声明-1个成员的数组而引发错误。
+
+{% highlight cpp %}
+template<class T> inline void checked_delete(T * x)  
+{  
+  typedef char type_must_be_complete[ sizeof(T)? 1: -1 ];  
+  (void) sizeof(type_must_be_complete);  
+  delete x;  
+}  
+  
+template<class T> inline void checked_array_delete(T * x)  
+{  
+  typedef char type_must_be_complete[ sizeof(T)? 1: -1 ];  
+  (void) sizeof(type_must_be_complete);  
+  delete [] x;  
+} 
+{% endhighlight %} 
+
+（完）
+
+作者 [侯振永][1]     
+写于2012 年 7月 23日
+
+[1]: https://zhenyonghou.github.io/

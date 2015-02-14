@@ -1,0 +1,212 @@
+---
+layout: post
+date:   2011-03-15 23:17
+categories: c++
+---
+
+
+在C语言中，有一种参数个数、类型不固定的函数，称之为变参函数，比如常用的printf函数。当我们在输出log信息时，也希望能写一个变参函数作为接口。这里介绍下如何写变参函数。 
+
+### 一、参数宏
+先来看几个设计变参函数要用到的几个宏，这几个宏定义在stdarg.h文件中。
+
+{% highlight c %}
+typedef char *  va_list;
+#define va_start(ap,v)  ( ap = (va_list)&v + _INTSIZEOF(v) )
+#define va_arg(ap,t)    ( *(t *)((ap += _INTSIZEOF(t)) - _INTSIZEOF(t)) )
+#define va_end(ap)      ( ap = (va_list)0 )
+{% endhighlight %}
+ 
+1）指针类型va_list是指向变参的指针的类型。
+2）va_start用来初始化ap（va_list型），从该宏的内容可看出ap指向了v后面的第一个参数，通常调用此宏使ap指向第一个变参。
+3）va_arg是将ap指向下一个参数，t为类型，该表达式返回下一个参数的值。
+4）va_end是将ap置0。
+ 
+### 二、sprintf的实现
+我粗略地仿sprintf写了个变参函数mysprintf，只为让大家了解一下实现细节。
+
+{% highlight c %}
+int myprintf(const char* fmt, ...){
+         int d, count = 0;;
+         char c, *s;
+         double f;
+ 
+         va_list ap;
+         va_start(ap, fmt);
+ 
+         while(0 != *fmt){
+                   if('%' != *fmt){
+                            putchar(*fmt);
+                   }
+                   else{
+                            switch(*++fmt){
+                            case 'd':
+                                     d = va_arg(ap, int);
+                                     putchar(d);
+                                     break;
+                            case 'c':
+                                     c = va_arg(ap, char);
+                                     putchar(c);
+                                     break;
+                            case 's':
+                                     s = va_arg(ap, char*);
+                                     puts(s);
+                                     break;
+                            case 'f':
+                                     f = va_arg(ap, double);
+                                     printf("%f", f);
+                                     break;
+                            case 'x':
+                                     d = va_arg(ap, int);
+                                     printf("%x", d);
+                                     break;
+                            default:
+                                     break;
+                            }
+                   }
+                   count++;
+                   fmt++;
+         }
+ 
+         va_end(ap);
+        
+         return count;
+}
+{% endhighlight %}
+ 
+注意：上面的代码只是对sprintf部分格式的简单模仿，并不能代替sprintf函数。
+ 
+### 三、优化变参函数
+下面从两方面入手优化变参函数：
+
+#### 1、安全性方面
+
+虽然sprintf输出字符串内存分配大小由调用者来控制，但免不了出现失控的局面，极易造成内存越界。
+
+下面就是造成内存越界的情况：
+
+{% highlight c %}
+char str[20];
+
+sprintf(str, “%d*%d = %d”, a, a, a*a);
+{% endhighlight %}
+
+当a=10时不会引起越界，当a=10000时长度越界。
+
+解决方法是为输出参数指明长度：
+
+{% highlight c %}
+int snprintf(char *str, size_t size, const char *format, ...);
+{% endhighlight %}
+
+#### 2、封装变参控制逻辑
+
+下面对变参控制部分进行了封装。
+
+{% highlight c %}
+
+int hzy_snprintf(char* szout, size_t size, const char* fmt, ...){
+       if(NULL == szout || NULL == fmt){
+              return RET_FAIL;
+       }
+       int ret;
+       memset(szout, 0, size);
+      
+       va_list ap;      
+       va_start(ap, fmt);
+#ifdef _WIN32
+       ret = _vsnprintf(szout, size, fmt, ap);
+#else
+       ret = vsnprintf(szout, size, fmt, ap);
+#endif
+       va_end(ap);
+      
+       return ret;
+}
+{% endhighlight %}
+
+上面函数中使用了库函数vsnprintf，函数原型：
+
+{% highlight c %}
+int vsnprintf( char *buffer, size_t count, const char *format, va_list argptr );
+{% endhighlight %}
+
+注：_vsnprintf 函数是windows平台专用函数，vsnprintf函数是C标准库函数。使用了它，再也不用理会繁琐的格式控制了。
+    上面的封装还没有结束。本着提高代码复用性的原则，欲将上面代码应用于所有变参函数，但当遇到另外一个变参函数调用此函数时遇到了传递变参的问题。我们看到，只要把fmt传递给子函数就可以做到变参部分的封装，同时要注意va_start要取得fmt的地址，所以有两种方式封装子函数：
+ 
+第一种方法：使用双指针或引用：
+如：
+
+{% highlight c %}
+int __hzy_snprintf(char* szout, size_t size, const char** fmt)           // 双指针
+int __hzy_snprintf(char* szout, size_t size, const char* &fmt)          // 引用
+{% endhighlight %}
+ 
+使用双指针的CODE如下（使用引用方式的CODE略）:
+
+{% highlight c %}
+int __hzy_snprintf(char* szout, size_t size, const char** fmt){         // 注意，这里用了双指针
+       if(NULL == szout || NULL == fmt){
+              return RET_FAIL;
+       }
+      
+       int ret;
+       memset(szout, 0, size);
+      
+       va_list ap;      
+       va_start(ap, *fmt);
+#ifdef _WIN32
+       ret = _vsnprintf(szout, size, *fmt, ap);
+#else
+       ret = vsnprintf(szout, size, *fmt, ap);
+#endif
+       va_end(ap);
+      
+       return ret;
+}
+ 
+int hzy_snprintf(char* szout, size_t size, const char* fmt, ...){
+       if(NULL == szout || NULL == fmt){
+              return RET_FAIL;
+       }
+       return __snprintf(szout, size, &fmt);
+}
+{% endhighlight %}
+ 
+第二种方法：使用函数宏
+
+{% highlight c %}
+#ifdef _WIN32
+#define HZY_VSNPRINTF _vsnprintf
+#else
+#define HZY_VSNPRINTF vsnprintf
+#endif
+ 
+#define HZY_SNPRINTF(szout, size, fmt) /
+{ /
+       if(NULL == szout || NULL == fmt){ /
+       return RET_FAIL; /
+       } /
+       int ret; /
+       memset(szout, 0, size); /
+       va_list ap;       /
+       va_start(ap, fmt); /
+       ret = HZY_VSNPRINTF(szout, size, fmt, ap); /
+       va_end(ap); /
+       return ret; /
+}
+ 
+int hzy_snprintf(char* szout, size_t size, const char* fmt, ...){
+       if(NULL == szout || NULL == fmt){
+              return RET_FAIL;
+       }
+       HZY_SNPRINTF(szout, size, fmt);
+}
+{% endhighlight %}
+ 
+到这里关于C语言变参函数的实现说完了，上面所有代码在VC6上编译通过。
+
+作者 [侯振永][1]     
+写于2011 年 3月 15日 23:17
+
+[1]: https://zhenyonghou.github.io/

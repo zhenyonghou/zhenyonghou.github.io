@@ -1,0 +1,129 @@
+---
+layout: post
+date:   2012-07-22 23:23
+categories: c++
+---
+
+
+libcurl是C语言开发的网络库，支持多种网络协议.
+
+### 开发前的准备
+
+开发环境windows, vs2005.
+
+先下载Curl，目前最新版本：7.22.0
+
+libcurl有现成的vs工程，在curl-7.22.0\lib目录，将其编译成静态库，生成libcurl.lib.
+
+建一练习工程，从curl-7.22.0\lib目录引入libcurl工程，将curl-7.22.0\include\目录加进工程的Include Directories，引入3个lib文件：Ws2_32.lib Wldap32.lib libcurl.lib，增加预定义CURL_STATICLIB
+
+设置完成，编译应该能通过。
+
+Curl 提供了一系列接口，可分为分easy interface和multiinterface，前者是堵塞的，后者用于多线程，可做非堵塞应用。两者不是鼓励的，multi interface也依赖于easy interface，所以，先从熟悉easy interface开始学起。
+
+### easy interface
+
+初始化/清理curl环境
+
+curl_global_init / curl_global_cleanup
+初始化/释放easy handle
+
+curl_easy_init / curl_easy_cleanup
+设url
+curl_easy_setopt(easy_handle_, CURLOPT_URL, "http://www.XXX.com/RL.do");
+
+设HTTP方法
+// POST
+
+curl_easy_setopt(easy_handle_, CURLOPT_POST, 1);
+
+// GET
+
+curl_easy_setopt(easy_handle_, CURLOPT_HTTPGET, 1);
+
+// PUT
+
+curl_easy_setopt(easy_handle_, CURLOPT_UPLOAD, 1);
+
+// POST multipart/formdata类型
+
+curl_easy_setopt(easy_handle_, CURLOPT_HTTPPOST, formpost);
+
+设body
+
+curl_easy_setopt(easy_handle_, CURLOPT_POSTFIELDS, body.c_str());
+
+设置超时时间，10s内数据接收未完成则直接退出
+
+curl_easy_setopt(easy_handle_, CURLOPT_TIMEOUT, 10);
+
+设置User-Agent
+
+curl_easy_setopt(easy_handle_, CURLOPT_USERAGENT, "XXX");
+
+接收数据，输入类的静态函数地址
+
+curl_easy_setopt(easy_handle_, CURLOPT_WRITEFUNCTION, &RecvData);
+curl_easy_setopt(easy_handle_, CURLOPT_WRITEDATA, this);
+
+执行
+
+curl_easy_perform(easy_handle_);
+
+取得redirect url
+
+curl_easy_getinfo(easy_handle_, CURLINFO_REDIRECT_URL, &redirect_url);
+
+取得cookies，若要取得某一cookie值，需解析
+
+curl_easy_getinfo(easy_handle_, CURLINFO_COOKIELIST, &cookies)
+
+取得response code
+
+curl_easy_getinfo(easy_handle_, CURLINFO_RESPONSE_CODE, &res_code_);
+
+
+
+### cookie操作
+
+设置客户端接收到的cookie的存放目录
+
+curl_easy_setopt(easy_handle_, CURLOPT_COOKIEJAR, cookie_file_.c_str());
+
+设置读取的cookie文件
+
+curl_easy_setopt(easy_handle_, CURLOPT_COOKIEFILE, cookie_file_.c_str());
+
+
+
+### 上传文件
+
+方法一：传入文件路径，不需要写读文件内容的代码
+
+curl_formadd(&formpost, &lastptr,
+    CURLFORM_COPYNAME, "photos",
+    CURLFORM_FILE, utf8_file_name.c_str(), // 文件路径
+    CURLFORM_END);
+
+方法二：先将文件内容读入内存，将内容传入
+
+curl_formadd(&formpost, &lastptr,
+               CURLFORM_COPYNAME, "photos",
+               CURLFORM_BUFFER, "a.jpg",
+               CURLFORM_BUFFERPTR, file_data,
+               CURLFORM_BUFFERLENGTH, file_size,
+               CURLFORM_CONTENTTYPE, "image/jpeg",
+               CURLFORM_END);
+
+
+
+url-encode/url-decode
+
+curl_escape、curl_unescape、curl_free
+
+
+
+作者 [侯振永][1]     
+写于2012 年 7月 22日
+
+[1]: https://zhenyonghou.github.io/

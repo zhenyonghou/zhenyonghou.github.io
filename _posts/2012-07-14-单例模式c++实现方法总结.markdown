@@ -1,0 +1,161 @@
+---
+layout: post
+date:   2012-07-14 20:32
+categories: c++
+---
+
+### 一  单例模式介绍
+
+单例模式约束了类的实例化，只允许类创建一个对象。
+
+在用代码实现单例模式之前，先看看单例模式的类结构：
+
+（此处缺图）
+ 
+
+特点：
+
+1.  类的构造函数外界不可访问.
+
+2.  提供了创建对象的接口. 
+
+### 二  单例模式C++实现
+
+#### 1.   实现方法一（只作为样例，不推荐使用）
+
+{% highlight cpp %}
+// .h文件  
+class SimpleSingleton  
+{  
+public:  
+  ~SimpleSingleton(){}    // 因为外界负责delete，所以须注意析构函数访问权限  
+  static SimpleSingleton* Instance()  
+  {  
+    if(!instance_)                    // 线程不安全，这里需要同步  
+      instance_ = new SimpleSingleton;  
+    return instance_;  
+  }  
+protected:  
+  SimpleSingleton(){}    
+  
+  static SimpleSingleton* instance_;  
+}; 
+
+// cpp文件  
+SimpleSingleton* SimpleSingleton::instance_ = 0;  
+
+{% endhighlight %}
+
+该方法是简陋的单例模式实现方式，缺点是：
+
+该类只负责类对象的创建，没有负责销毁，还得程序员负责在合适的时机销毁，所以不推荐使用该方法。
+
+####  2  实现方法二（智能指针方式）
+
+{% highlight cpp %}
+// .h文件  
+class PtrSingleton  
+{  
+public:  
+  ~PtrSingleton(){}   // 必须为public, 智能指针负责析构  
+  static scoped_ptr<PtrSingleton>& Instance()  
+  {  
+    if(NULL == instance_.get())                    // 线程不安全，这里需要同步  
+      instance_.reset(new PtrSingleton);  
+    return instance_;  
+  }  
+  // other members    
+protected:  
+  PtrSingleton(){}    
+  
+  static scoped_ptr<PtrSingleton> instance_;  
+};  
+  
+// .cpp文件  
+scoped_ptr<PtrSingleton> PtrSingleton::instance_;  
+{% endhighlight %}
+
+该方法特点：
+
+1)   避免了手动析构.
+
+2)   值得注意的是实例化接口返回类型不是对象指针、值、引用，而是智能指针.
+
+3)   但在实际使用中要考虑到多线程环境下的使用，Instance接口是线程不安全的，需要同步一下，本篇重点讲单例模式，代码样例中就不做线程同步了.
+
+#### 3  实现方法三（简单方式）
+
+{% highlight cpp %}
+// .cpp文件  
+class Singleton  
+{  
+public:  
+  ~Singleton(){}  
+  static Singleton& Instance(){return instance_;}  
+  // testing member  
+  
+protected:  
+  Singleton(){}    
+  Singleton(const Singleton&);  
+  Singleton& operator=(const Singleton&);  
+  
+private:  
+  static Singleton instance_;  
+};  
+// .cpp文件  
+Singleton Singleton::instance_;  
+
+{% endhighlight %}
+
+这种方法实现起来简单，用起来方便，安全。 
+
+#### 三  单例模式模版实现
+
+{% highlight cpp %}
+// .h文件  
+template <typename T>  
+class TSingleton  
+{  
+public:  
+  virtual ~TSingleton(){}    // 必须为public, 智能指针负责析构  
+  static scoped_ptr<T>& Instance()  
+  {  
+    if(NULL == instance_.get())           // 线程不安全，这里需要同步  
+      instance_.reset(new T);  
+    return instance_;  
+  }  
+  
+protected:  
+  TSingleton(){}  
+  TSingleton(const TSingleton<T>&);  
+  TSingleton<T>& operator=(const TSingleton<T>);  
+  
+  static scoped_ptr<T> instance_;  
+};  
+  
+template<typename T>  
+scoped_ptr<T> TSingleton<T>::instance_;  
+{% endhighlight %}
+
+单例模版的应用实例
+
+
+{% highlight cpp %}
+class Derived : public TSingleton<Derived>  
+{  
+public:  
+  // other members  
+  
+protected:  
+  Derived(){}  
+  ~Derived(){}  
+};  
+{% endhighlight %}
+
+(完)
+
+
+作者 [侯振永][1]     
+写于2012 年 7月 14日
+
+[1]: https://zhenyonghou.github.io/

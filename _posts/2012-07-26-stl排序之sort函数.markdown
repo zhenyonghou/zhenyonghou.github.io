@@ -1,0 +1,129 @@
+---
+layout: post
+date:   2012-07-26 23:26
+categories: c++
+---
+
+STL容器的排序，支持随机访问的容器vector,deque,string没有sort成员，可调用std::sort排序；list排序调用自带的list::sort。
+
+下面是std::sort函数，有两个版本：
+
+{% highlight cpp %}
+template <class RandomAccessIterator>  
+void sort ( RandomAccessIterator first, RandomAccessIterator last );  
+  
+template <class RandomAccessIterator, class Compare>  
+void sort ( RandomAccessIterator first, RandomAccessIterator last, Compare comp );  
+{% endhighlight %}
+
+sort函数有以下特征：
+1. 要求输入一个范围[first, last)
+2. 随机迭代器，能用此算法的容器是支持随机访问的容器：vector, deque, string。
+3.第一个版本使用operator<进行比较，默认升序排序，第二个版本使用comp做比较.
+关于参数comp，comp带两个同类型的参数，如果第一个参数排在第二个参数前面，返回true，否则返回false
+它可以是函数指针，也可以是函数对象。函数指针好理解，何谓函数对象？
+函数对象（Function Object），是重载了operator()函数的类（或结构体）实例化出来的对象，使用起来像函数，又叫仿函数。
+
+STL本身提供了几个比较函数,下面这些都是仿函数：
+less(小于)
+greater(大于)
+equal_to(等于)
+not_equal_to(不相等)
+less_equal(小于等于)
+greater_equal(大于等于)
+
+当容器元素为内建类型时可以使用，注意使用的格式，要加模版参数（由于是模板类）和后面的()，如下：
+
+{% highlight cpp %}
+sort(vec.begin(), vec.end(), less<int>()); 
+{% endhighlight %}
+
+对于复合类型，实现排序方式有3种方法：
+1） 重载operator<操作符
+2） 写全局的比较函数
+3） 写仿函数，重载operator()形式为：bool operator()(const 类名& 参数){…}
+
+
+下面看看这3种方法的实现：
+
+{% highlight cpp %}
+// 排序元素，比较的对象  
+struct Person  
+{  
+  Person(int id, const string& name, int age): id_(id), name_(name), age_(age)  
+  {}  
+    
+  int id_;  
+  string name_;  
+  int age_;  
+}; 
+{% endhighlight %} 
+
+{% highlight cpp %}
+// 方式1：重载operator<用于排序时的比较(写在函数体内)  
+bool operator< (const Person& rt)  
+{  
+  return this->id_ < rt.id_;  
+}  
+{% endhighlight %}
+  
+// 排序函数写法，默认调用operator<  
+sort(members.begin(), members.end());  
+
+{% highlight cpp %}
+// 方式2：写比较函数  
+bool CompAge(const Person& pl, const Person& pr)  
+{  
+  return pl.age_ < pr.age_;  
+}  
+{% endhighlight %}
+  
+// 排序时传入比较函数指针  
+sort(members.begin(), members.end(), CompAge);  
+
+{% highlight cpp %}
+// 方式3：仿函数  
+struct CompName  
+{  
+  bool operator()(const Person& pl, const Person& pr)  
+  {  
+    return pl.name_ < pr.name_;  
+  }  
+};  
+
+  
+// 排序时传入函数对象  
+sort(members.begin(), members.end(), CompName()); 
+
+{% endhighlight %}
+
+
+用函数对象代替函数指针的优点：
+1. 函数对象可以存储中间结果在数据成员中，而函数想要存中间结果须要设全局变量或静态变量，这个是我们不想要的。
+2. 在函数对象中编译器可以实现内联调用，从而提升性能。
+下面看一个函数对象的扩展应用
+
+{% highlight cpp %}
+// 利用函数对象实现升降排序  
+struct CompNameEx{  
+  CompNameEx(bool asce) : asce_(asce)  
+  {}  
+  bool operator()(const Person& pl, const Person& pr)  
+  {  
+    return asce_ ? pl.name_ < pr.name_ : pr.name_ < pl.name_;<span style="white-space:pre">   </span>// 《Eff STL》条款21: 永远让比较函数对相等的值返回false  
+  }  
+private:  
+  bool asce_;  
+};  
+// 使用仿函数排序(升降序)  
+sort(members.begin(), members.end(), CompNameEx(false)); 
+
+{% endhighlight %}
+
+注意：如果是指针的容器，比较函数的参数也应是指针。
+
+
+作者 [侯振永][1]     
+写于2012 年 7月 26日
+
+[1]: https://zhenyonghou.github.io/

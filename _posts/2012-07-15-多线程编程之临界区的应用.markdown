@@ -1,0 +1,101 @@
+---
+layout: post
+date:   2012-07-15 00:22
+categories: c++
+---
+
+### 一 临界区特点
+临界区（Critical Section）是一段供线程独占式访问的代码，也就是说若有一线程正在访问该代码段，其它线程想要访问，只能等待当前线程离开该代码段方可进入，这样保证了线程安全。他工作于用户级（相对于内核级），在Window系统中CRITICAL_SECTION实现临界区相关机制。
+
+### 二 临界区相关函数：
+
+{% highlight cpp %}
+void InitializeCriticalSection(LPCRITICAL_SECTION lpCriticalSection)  // 初始化临界区
+
+void EnterCriticalSection(LPCRITICAL_SECTION lpCriticalSection)       // 进入临界区
+
+void LeaveCriticalSection(LPCRITICAL_SECTION lpCriticalSection)       // 离开临界区
+
+void DeleteCriticalSection(LPCRITICAL_SECTION lpCriticalSection)      // 释放临界区资源
+
+{% endhighlight %}
+
+使用示例：
+
+{% highlight cpp %}
+#include <windows.h>  
+   
+static CRITICAL_SECTION cs; // 定义临界区对象，如果程序是OOP的，可以定义为类non-static成员  
+  
+// 在进入多线程环境之前，初始化临界区  
+InitializeCriticalSection(&cs);  
+   
+void f()  
+{      
+    EnterCriticalSection(&cs);// 进入临界区，其它线程则无法进入  
+   
+    // 安全访问该区域  
+   
+      
+    LeaveCriticalSection(&cs);  // 离开临界区，其它线程可以进入  
+}  
+   
+// 释放临界区资源，当不再使用临界区时调用该函数  
+DeleteCriticalSection(&cs); 
+
+{% endhighlight %} 
+
+### 三 临界区的应用
+EnterCriticalSection和LeaveCriticalSection跟new/delete一样是成对调用的，很多时候在调用EnterCriticalSection以后不得不在多处加入LeaveCriticalSection，因为临界区内有return,break,continue,goto等等跳转，一不小心就会造成死锁。基于这个原因，在很多开源代码中都对CRITICAL_SECTION进行了封装。下面是我从某开源库中摘取的封装后的代码：
+
+{% highlight cpp %}
+#include <Windows.h>  
+  
+class Mutex {  
+public:  
+  Mutex()                      { InitializeCriticalSection(§ion); }  
+  ~Mutex()                     { DeleteCriticalSection(§ion); }  
+  void  Enter()                { EnterCriticalSection(§ion); }  
+  void  Leave()                { LeaveCriticalSection(§ion); }  
+  
+  struct Lock;  
+protected:  
+  Mutex(const Mutex&);  
+  Mutex& operator=(const Mutex&);  
+  
+  CRITICAL_SECTION section;  
+};  
+  
+struct Mutex::Lock {  
+  Mutex& s;  
+  Lock(Mutex& s) : s(s) { s.Enter(); }  
+  ~Lock()               { s.Leave(); }  
+}; 
+{% endhighlight %} 
+ 
+上面Mutex封装了CRITICAL_SECTION相关的四个函数，Mutex的对象可作为类的non-static成员，这样通过Mutex的构造和析构执行InitializeCriticalSection和DeleteCriticalSection。
+在进入临界区的地方（函数体内）定义Mutex::Lock的对象作为局部变量，通过Mutex::Lock对象的生命周期控制临界区范围。
+使用示例：
+
+{% highlight cpp %}
+class A{  
+public:  
+  void Foo();  
+private:  
+  Mutex mutex;  
+};  
+  
+void A::Foo()  
+{    
+  Mutex::Lock lock(mutex);  
+  // 临界区代码  
+} 
+
+{% endhighlight %} 
+
+（完）
+
+作者 [侯振永][1]     
+写于2012 年 7月 15日
+
+[1]: https://zhenyonghou.github.io/

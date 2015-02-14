@@ -1,0 +1,113 @@
+---
+layout: post
+date:   2012-07-02 22:55
+categories: c++
+---
+
+我们常在公共头文件中定义一些常量，定义常量方法如下：
+
+方法1
+commdef.h(公共头文件)：
+
+const int constname = XXX;
+
+在使用该变量的地方加入 #include "commdef.h"
+
+方法2
+commdef.h(公共头文件)：
+
+extern const int constname;
+
+commdef.cpp文件：
+
+const int constname = XXX;
+
+在使用该变量的地方加入 #include "commdef.h"
+由于这两种方式都编译运行没问题，所以程序员很少留意它们的区别。两种方法的比较：
+
+若添加删除常量常量，用方法1更方便，只需在.h文件中修改；若改变常量值，使用方法2的程序因不需要改头文件，则更节省编译时间。
+
+若从内存使用上看，哪种更好？接下来测试看看。
+
+测试程序定义了两个模块，test1和test2，test1.cpp和test2.cpp都引用了commdef.h头文件，使用了全局常量，我们通过查看各个模块的常量地址来确定是否另分配了内存。
+
+环境：Windows + vs2005
+
+{% highlight cpp %}
+
+// commdef.h文件
+
+#ifndef LX_COMMDEF_H
+#define LX_COMMDEF_H
+
+const int MAX_LENGTH = 1024;
+
+extern const int MIN_LENGTH;
+
+#endif
+// commdef.cpp文件
+
+#include "commdef.h"
+
+const int MIN_LENGTH = 10;
+// test1.cpp文件（注：头文件内容由于简单所以省略掉了）
+
+#include "commdef.h"
+#include "test1.h"
+#include <iostream>
+using namespace std;
+
+void FuncTest1()
+{
+  cout << "MAX_LENGTH = " << MAX_LENGTH << ", address: " << &MAX_LENGTH << endl;
+  cout << "MIN_LENGTH = " << MIN_LENGTH << ", address: " << &MIN_LENGTH << endl;
+}
+// test2.cpp文件（注：头文件内容由于简单所以省略掉了）
+
+#include "commdef.h"
+#include "test1.h"
+#include <iostream>
+using namespace std;
+
+void FuncTest2()
+{
+  cout << "MAX_LENGTH = " << MAX_LENGTH << ", address: " << &MAX_LENGTH << endl;
+  cout << "MIN_LENGTH = " << MIN_LENGTH << ", address: " << &MIN_LENGTH << endl;
+}
+{% endhighlight %}
+
+输出：
+
+{% highlight cpp %}
+
+MAX_LENGTH = 1024, address: 00437AE4
+MIN_LENGTH = 10, address: 00437B54
+MAX_LENGTH = 1024, address: 00437B1C
+MIN_LENGTH = 10, address: 00437B54
+
+{% endhighlight %}
+
+可见，用方法1定义的常量在多个模块中是分别存储的，用方法2定义的常量是在一处存储的，所以，在存储上，方法2要优于方法1。
+特别是当常量多，头文件被引用多的情况下尤其注意，定义不当会带来不必要的内存浪费。
+
+
+附上stackoverflow上找到的：
+static in Objective-C means a different thing than static in a C++ class, in the context of static class data members and static class methods. In C and Objective-C, a static variable or function at global scope means that that symbol has internal linkage.
+
+
+Internal linkage means that that symbol is local to the current translation unit, which is the current source file (.c or .m) being compiled and all of the header files that it recursively includes. That symbol cannot be referenced from a different translation unit, and you can have other symbols with internal linkage in other translation units with the same name.
+
+
+So, if you have a header file declaring a variable as static, each source file that includes that header gets a separate global variable—all references to that variable within one source file will refer to the same variable, but references in different source files will refer to different variables.
+
+
+If you want to have a single global variable, you can't have it in class scope like in C++. One option is to create a global variable with external linkage: declare the variable with the extern keyword in a header file, and then in one source file, define it at global scope without the extern keyword. Internal linkage and external linkage are mutually exclusive—you cannot have a variable declared as both extern and static.
+
+
+An alternative, as Panos suggested, would be to use a class method instead of a variable. This keeps the functionality within the scope of the class, which makes more sense semantically, and you can also make it @private if you so desire. It does add a marginal performance penalty, but that's highly unlikely to be the bottleneck in your application (if you suspect it is, always profile first).
+
+
+作者 [侯振永][1]     
+写于2012 年 7月 2日
+
+[1]: https://zhenyonghou.github.io/

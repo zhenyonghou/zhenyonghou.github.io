@@ -1,0 +1,215 @@
+---
+layout: post
+date:   2012-04-16 00:08
+categories: c++
+---
+
+
+之所以想写一篇函数指针的文章，源于函数指针在C/C++编程中使用的广泛性，而对于一些初级编程者来说对函数指针的使用或许有些迷惑，而一旦在适当的时候使用了函数指针，会使代码简洁有力。本篇介绍的是函数指针的基础部分，函数指针复杂的应用将在下一篇介绍。
+
+### 一  指向普通函数的指针
+先来看一个函数：
+
+{% highlight cpp %}
+int Sum(int a, int b)  
+{  
+  return a + b;  
+} 
+{% endhighlight %}
+
+这个函数，调用方式可以如
+
+{% highlight cpp %}
+Sum(1, 2);
+{% endhighlight %}
+
+若要表示函数的指针，可以用&Sum，也可以将Sum前边的地址操作符&去掉，对于普通函数，地址操作符&是可选的。
+
+下面介绍函数指针变量和函数指针类型： 
+
+#### 1.  函数指针变量
+
+{% highlight cpp %}
+int (*FnName)(int, int);           // 声明一个函数指针，可以将FnName理解为新定义的变量  
+FnName = &Sum;             // 将Sum函数的地址赋给它  
+(*FnName)(3, 5);           // 和调用Sum(3, 5)的效果是一样的 
+{% endhighlight %}
+
+第1行声明了一个函数指针变量，如果有疑问，可以将FnName理解为一个新定义的变量。函数指针变量的声明格式：
+
+返回类型（*函数指针变量）（参数列表）;
+
+第2行将Sum函数指针赋给它，注意，只有两个函数指针参数类型，返回值类型完全相同才可以赋值，注意修饰符const，&等不同也会导致赋值失败。
+
+第3行是调用，调用格式：
+
+（*函数指针变量）（实参列表）; 
+
+#### 2.  函数指针类型
+
+前面介绍了函数指针变量的声明，那么函数指针类型如何声明呢？
+
+在函数指针声明前面加个typedef就成了函数指针类型定义。
+
+{% highlight cpp %}
+typedef int (*FnType)(int, int);   // 声明一个函数指针类型  
+FnType fb = &Sum;                   // 定义一个FnType类型的变量，并赋值  
+(*fb)(3, 5);                        // 函数调用  
+{% endhighlight %}
+
+第1行声明函数指针的类型，FnType便是新声明的类型，它是函数指针的类型。
+
+第2行定义一个FnType类型的变量，并将Sum函数地址赋值给它。
+
+第3行是函数调用。 
+
+前面已经了解了函数指针的变量和类型，看下面的代码加深下理解：
+
+{% highlight cpp %}
+int Sum(int a, int b)  
+{  
+  return a + b;  
+}
+  
+typedef int (*FnType)(int, int);  
+int Fun1(FnType ft, int x, int y)  
+{  
+  return (*ft)(x, y);  
+}  
+// 函数指针可以定义在参数列表中，在函数体内使用  
+int Fun2(int (*fn)(int, int), int x, int y)  
+{  
+  return (*fn)(x, y);    
+}  
+  
+int main()  
+{  
+  cout << Fun1(&Sum, 2, 3) << " ";  // 输出 5  
+  cout << Fun2(&Sum, 3, 4) << "\n"; // 输出 7  
+  return 0;  
+}
+{% endhighlight %}
+
+关于普通函数指针的学习就到这里吧，简单吧：)，下面就来学习类的成员函数的指针。 
+
+### 二 指向类成员函数的指针
+先看下面这个类：
+
+{% highlight cpp %}
+class Num  
+{  
+public:  
+  Num(){n_ = 0;}  
+  void Inc(int n);  
+  void Dec(int n);  
+  static int Sub(int a, int b);  
+private:  
+  long n_;  
+};
+{% endhighlight %}
+
+这个类中有普通成员函数，也有静态成员函数，无论哪种函数，函数指针表示方式都是：
+
+&类名::函数名
+
+如Num类三个成员函数的指针分别是：
+
+&Num::Inc;
+
+&Num::Dec;
+
+&Num::Sub;
+
+#### 1.  指向普通成员函数的指针
+
+ 声明一个指向类成员函数的指针时需要用到::*符号，左边是类名，右边是成员函数指针名：
+
+返回类型 类名::*成员函数指针（参数列表）;
+
+调用的时候要用到.*或->*，左边是类对象的引用或指针，右边是成员函数指针：
+
+（对象名.* 成员函数指针）（实参）;
+
+或
+
+（对象指针->* 成员函数指针）（实参）; 
+
+代码示例：
+
+{% highlight cpp %}
+int main()  
+{  
+  Num obj;  
+  void (Num::*mf)(int);    // 声明指向成员函数的指针 mf  
+  mf = &Num::Inc;           // 赋值    
+  (obj.*mf)(1);             // 调用  
+  
+  // 成员函数的指针类型  
+  typedef void (Num::*mt)(int);  
+  mt fn = &Num::Dec;  
+  (obj.*fn)(2);   
+  
+  return 0;  
+}  
+{% endhighlight %}
+
+注意上面，Sub是静态成员函数，其指针声明跟非静态成员函数不一样，下面来看静态成员函数的指针。 
+
+#### 2. 指向静态函数的指针
+
+{% highlight cpp %}
+int (*smf)(int a, int b); // 注意写法  
+smf = &Num::Sub;  
+cout << (*smf)(6, 7);        // 调用方式跟上一节讲的普通函数调用方式一样  
+{% endhighlight %}
+
+可以看到，静态成员函数指针变量、类型声明与普通函数一致。 
+
+#### 3. 指向虚函数的指针
+
+先上代码：
+
+{% highlight cpp %}
+class Base{  
+public:  
+  virtual void F() const  
+  {  
+    cout << "I am the Base\n";  
+  }  
+  
+  typedef void (Base::*FnPtr)() const;  
+};  
+  
+class Derived : public Base{  
+public:  
+  virtual void F() const  
+  {  
+    cout << "I am the Derived\n";  
+  }  
+};  
+  
+int main()  
+{  
+  Base::FnPtr fp = &Base::F;  
+  Base base;  
+(base.*fp)();  
+  Derived derived;  
+  (derived.*fp)();  
+  
+  return 0;  
+}  
+{% endhighlight %}
+
+输出结果：
+
+I am theBase
+
+I am theDerived 
+
+可见，虚函数的指针调用结果跟直接调用虚函数效果一样，虚函数的指针指向的函数地址是对象动态绑定的函数地址。
+
+
+作者 [侯振永][1]     
+写于2012 年 4月 16日
+
+[1]: https://zhenyonghou.github.io/
