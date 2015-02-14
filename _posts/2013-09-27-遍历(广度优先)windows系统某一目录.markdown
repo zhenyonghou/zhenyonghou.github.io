@@ -1,0 +1,248 @@
+---
+layout: post
+date:   2013-09-27 14:50
+categories: c++
+---
+
+遍历目录的类(广度优先)，本来想找一段代码了事，后来没发现合适的，自己写了一个，分享给大家。其中用到一个线程类，也是自己封装的，与主题无关不贴出来，有需要的话去我的资源里找吧。
+
+directory_traversal.h文件
+
+{% highlight cpp %}
+#ifndef DIRECTORY_TRAVERSAL_H__  
+#define DIRECTORY_TRAVERSAL_H__  
+#include <windows.h>  
+#include <queue>  
+#include "hthread.h"  
+  
+struct FileInfo{  
+  FileInfo();  
+  FileInfo(const FileInfo&);  
+  FileInfo& operator=(const FileInfo&);  
+  WIN32_FIND_DATAW   file_data;  
+  wchar_t           path[MAX_PATH];  
+  size_t            level;  
+};  
+  
+int MakePath(wchar_t* file_path, size_t size, const wchar_t* parent_path, const wchar_t* file_name);  
+FileInfo MakeFileInfo(const wchar_t* parent_path, size_t level, const WIN32_FIND_DATA& cur_fd);  
+  
+  
+class DirectoryTraversal  
+{  
+public:  
+  typedef bool (*callback_find)(const FileInfo* , void*);  
+  typedef void (*callback_complete)(bool , void*);  
+  DirectoryTraversal();  
+  virtual ~DirectoryTraversal();  
+  
+  // 设置遍历参数  
+  void SetCallback(callback_find cb_find, void* p1, callback_complete cb_complete, void* p2);  
+  // 启动遍历线程  
+  int Start(const wchar_t* begin_path, size_t max_level);  
+  
+  int BreadthFirstTravers(const wchar_t* begin_path, size_t max_level);  
+  
+  void SetStopFlag();  
+private:  
+  static unsigned int __stdcall ThreadTravers(void* lp);  
+  // 用递归方法，遍历d:\\w导致栈溢出  
+  //int BreadthFirstTravers(const wchar_t* path, size_t level);  
+  
+  /* 
+  如果cb_find返回bool型, 一般应返回true, 如果返回false且当前文件是目录, 则不遍历此目录下的文件 
+  p作为cb_find的参数. 
+  */  
+    
+  
+  HANDLE FindFirstSubFile(const wchar_t* path, WIN32_FIND_DATA* fd);  
+  
+protected:  
+  wchar_t       begin_path_[MAX_PATH];  
+  size_t        max_level_; // 遍历级数  
+  bool          stop_;  
+  callback_find cb_find_;  
+  void*         find_para_;  
+  callback_complete cb_complete_;  
+  void*         complete_para_;  
+  HThread       thread_;  
+  
+  std::queue<FileInfo> folder_queue_;  
+};  
+  
+#endif
+
+{% endhighlight %}
+
+directory_traversal.
+
+{% highlight cpp %}
+#include <Shlwapi.h>  
+#include <string.h>  
+#include <assert.h>  
+#include <wchar.h>  
+#include "directory_traversal.h"  
+  
+#pragma comment(lib,"shlwapi.lib")  
+  
+FileInfo::FileInfo()  
+{  
+  level = 0;  
+  memset(path, 0, sizeof(path));  
+}  
+  
+FileInfo::FileInfo(const FileInfo& r)  
+{  
+  this->file_data = r.file_data;  
+  wcscpy_s(this->path, MAX_PATH, r.path);  
+  this->level = r.level;  
+}  
+  
+FileInfo& FileInfo::operator=(const FileInfo& r)  
+{  
+  if(&r != this)  
+  {  
+    this->file_data = r.file_data;  
+    wcscpy_s(this->path, MAX_PATH, r.path);  
+    this->level = r.level;  
+  }  
+  return *this;  
+}  
+  
+int MakePath(wchar_t* file_path, size_t size, const wchar_t* parent_path, const wchar_t* file_name)  
+{  
+  int ret = wcscpy_s(file_path, size, parent_path);  
+  if (0 == ret)  
+    ret = PathAppendW(file_path, file_name) ? 0 : -1;  
+  return ret;  
+}  
+  
+FileInfo MakeFileInfo(const wchar_t* parent_path, size_t level, const WIN32_FIND_DATAW& cur_fd)  
+{  
+  FileInfo cur_folder;   
+  MakePath(cur_folder.path, MAX_PATH, parent_path, cur_fd.cFileName);  
+  cur_folder.file_data = cur_fd;  
+  cur_folder.level = level;  
+  return cur_folder;  
+}  
+  
+DirectoryTraversal::DirectoryTraversal() : stop_(false)  
+{}  
+  
+DirectoryTraversal::~DirectoryTraversal()  
+{  
+  thread_.WaitExit();  
+}  
+  
+void DirectoryTraversal::SetCallback(callback_find cb_find, void* p1, callback_complete cb_complete, void* p2)  
+{  
+  cb_find_ = cb_find;  
+  find_para_ = p1;  
+  
+  cb_complete_ = cb_complete;  
+  complete_para_ = p2;  
+}  
+  
+int DirectoryTraversal::Start(const wchar_t* begin_path, size_t max_level)  
+{  
+  stop_ = false;  
+  wcscpy_s(begin_path_, MAX_PATH, begin_path);  // 线程启动前要保存传入的数据  
+  max_level_ = max_level;  
+  thread_.Start(&DirectoryTraversal::ThreadTravers, this);  
+  return 0;  
+}  
+  
+unsigned int __stdcall DirectoryTraversal::ThreadTravers(void* lp)  
+{  
+  DirectoryTraversal* self = (DirectoryTraversal*)lp;  
+  if(wcslen(self->begin_path_) == 0)  
+    return -1;  
+  return self->BreadthFirstTravers(self->begin_path_, self->max_level_);  
+}  
+  
+int DirectoryTraversal::BreadthFirstTravers(const wchar_t* begin_path, size_t max_level)  
+{  
+  while(!folder_queue_.empty())  
+    folder_queue_.pop();  
+  
+  HANDLE find_file = INVALID_HANDLE_VALUE;  
+    WIN32_FIND_DATAW fd;  
+  
+  wchar_t cur_path[MAX_PATH];  
+  wcscpy_s(cur_path, MAX_PATH, begin_path);  
+  size_t cur_level = 1;  
+  do {  
+    if (max_level > 0 && cur_level > max_level) {  
+      if (cb_complete_)  
+        (*cb_complete_)(stop_, complete_para_);  
+      return 0;  
+      }  
+  
+    find_file = FindFirstSubFile(cur_path, &fd);  
+    if (INVALID_HANDLE_VALUE == find_file)   
+    {  
+      assert(false);  
+      if (cb_complete_)  
+        (*cb_complete_)(stop_, complete_para_);  
+      return -1;  
+    }  
+  
+    FileInfo new_find_file;  
+    do {        
+      if (!(fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {  
+        new_find_file = MakeFileInfo(cur_path, cur_level, fd);  
+        if(cb_find_)  
+          (*cb_find_)(&new_find_file, find_para_);  
+      }  
+      else {  
+        if(!(fd.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN) &&   
+          0 != wcscmp(fd.cFileName, L".") && 0 != wcscmp(fd.cFileName, L"..")) {  
+            new_find_file = MakeFileInfo(cur_path, cur_level, fd);  
+            if(cb_find_){  
+              if((*cb_find_)(&new_find_file, find_para_))  
+                folder_queue_.push(new_find_file);  
+            }  
+            else  
+              folder_queue_.push(new_find_file);  
+        }  
+      }    
+      if (stop_) break;      
+    } while(FindNextFileW(find_file, &fd));  
+  
+    FindClose(find_file);  
+  
+    if(stop_ || folder_queue_.empty()) {  
+      if (cb_complete_)  
+        (*cb_complete_)(stop_, complete_para_);  
+      return 0;  
+      }  
+  
+    FileInfo next_folder = folder_queue_.front();  
+    folder_queue_.pop();  
+  
+    cur_level = next_folder.level + 1;   
+  
+    wcscpy_s(cur_path, MAX_PATH, next_folder.path);  
+  } while(true);  
+}  
+  
+void DirectoryTraversal::SetStopFlag()  
+{  
+  stop_ = true;  
+}  
+  
+  HANDLE DirectoryTraversal::FindFirstSubFile(const wchar_t* path, WIN32_FIND_DATAW* fd)  
+  {  
+    wchar_t buffer[MAX_PATH];  
+    wcscpy_s(buffer, MAX_PATH, path);  
+    if(!PathAppendW(buffer, L"*.*"))  
+      return NULL;  
+    return FindFirstFileW(buffer, fd);      
+  }
+
+  {% endhighlight %}
+
+作者 [侯振永][1]     
+写于2013 年 9月 27日
+
+[1]: https://zhenyonghou.github.io/
