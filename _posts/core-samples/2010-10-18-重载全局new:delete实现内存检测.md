@@ -64,6 +64,7 @@ void * operator new [](size_t size, const char* file, const size_t line)；
 
 ##3. 将malloc/free 用new/delete替换
 为了便于统计malloc/free信息，也用宏定义的方法处理：
+
 ```
 #define malloc(s) ((void*)new unsigned char[s])
 #define free(p)   (delete [] (char*)(p));
