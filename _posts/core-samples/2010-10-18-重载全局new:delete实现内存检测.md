@@ -3,11 +3,13 @@
 
 下面介绍用重载new/delete运算符的方式来实现一个简单的内存泄露检测工具，基本思想是重载全局new/delete运算符，被检测代码调用new和delete运算符时就会调用重载过的operator new和operator delete，在重载的operator new里和operator delete里记录下内存申请和释放信息，从而判断内存使用情况。
 下面一步步介绍它的实现！
+
 ##1. 全局new/delete的重载
 先看一下重载new/delete的规则：
 重载的operator new的参数个数任意，但第一个参数必须是size_t类型的，返回值必须是void*。重载operator delete只允许有一个参数，且是void*型。
 当然，不光要重载operator new 和 operator delete, 还要重载operator new [], operator delete []，更多operator new和operator delete重载的内容参考《Effective C++》
 重载的new/delete, new[]/delete[]代码如下：
+
 ```
 void * operator new (size_t size){
 if(0 == size){
@@ -31,6 +33,7 @@ void operator delete[](void * pointer){
        operator delete(pointer);
 }
 ```
+
 ##2. 用__FILE__, __LINE__记录new的位置
 为了找到内存泄露的元凶，我要记录下每一处new所在的文件名和所在行。于是再次重载了operator new：
 ```
@@ -58,6 +61,7 @@ void * operator new [](size_t size, const char* file, const size_t line)；
 #define MC_NEW new(__FILE__, __LINE__)
 #define new MC_NEW
 ```
+
 ##3. 将malloc/free 用new/delete替换
 为了便于统计malloc/free信息，也用宏定义的方法处理：
 ```
