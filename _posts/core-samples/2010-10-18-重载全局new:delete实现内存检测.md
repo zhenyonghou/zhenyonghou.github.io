@@ -9,7 +9,6 @@
 重载的operator new的参数个数任意，但第一个参数必须是size_t类型的，返回值必须是void*。重载operator delete只允许有一个参数，且是void*型。
 当然，不光要重载operator new 和 operator delete, 还要重载operator new [], operator delete []，更多operator new和operator delete重载的内容参考《Effective C++》
 重载的new/delete, new[]/delete[]代码如下：
-
 ```ruby
 void * operator new (size_t size){
 if(0 == size){
