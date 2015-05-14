@@ -8,7 +8,7 @@ categories: ios
 
 技术的东西在后边，先看图，这是某条新闻的内容页面：
 
-![My helpful screenshot]({{ site.url }}/assets/DD897FC6-4112-41AA-B76F-D964E166BAAD.jpg)
+![My helpful screenshot](https://zhenyonghou.github.io/assets/DD897FC6-4112-41AA-B76F-D964E166BAAD.jpg)
 
 ![My helpful screenshot]({{ site.url }}/assets/B0339F5B-A734-4DF0-A8EC-6EA645B54F26.jpg)
 
