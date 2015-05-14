@@ -1,0 +1,63 @@
+---
+layout: post
+date:   2014-10-16 11:14
+categories: ios
+---
+
+调研了下网易新闻客户端，发现很多值得借鉴的地方，简单整理了下，供参考。
+
+技术的东西在后边，先看图，这是某条新闻的内容页面：
+
+![My helpful screenshot]({{ site.url }}/assets/DD897FC6-4112-41AA-B76F-D964E166BAAD.jpg)
+
+![My helpful screenshot]({{ site.url }}/assets/B0339F5B-A734-4DF0-A8EC-6EA645B54F26.jpg)
+
+### 技术要点
+
+### 一. 服务器返回的数据
+
+通过抓包看到，客户端请求某条新闻内容，服务器端返回JSON数据（看后边粘贴）：
+
+解释下json数据的主要字段：
+
+“body”                                                    // html的body内容。
+
+关于body里的内容，仔细看去吧，有各种标记，比如<!--IMG#0—>表示一个图片，这个图片的信息在哪呢？在”img”里。
+
+“img”                                                      // 数组，body中的所有图片信息，看一个元素的数据：
+
+{
+               "ref": "<!--IMG#0-->",
+               "pixel": "300*147",
+               "alt": "",
+               "src": "http://easyread.ph.126.net/8SxOrqsmx0PxLcaF_zvNrQ==/7916550790197173524.jpg"
+ }
+
+"recommend”                                          // 数组，相关推荐
+"relative_sys”                                          // 数组，相关新闻
+
+
+"docid": "A8LVKA1E9001KA1F",                  
+ "title": "创意家居：我的收纳我做主 寻找收纳小窍门”,   // 这是标题
+
+从返回的数据可以看出，HTML是交给客户端构建了，这样做，客户端保存新闻内容时只需要保存json包就可以了。
+
+### 二.js文件和CSS文件
+
+解开网易新闻APP包，根目录下有content.css和content.
+
+js两个文件，存在本地是为每个页面构建HTML时候使用的。
+
+
+### 三.HTML模板文件
+
+看过服务器返回的json数据，很容易想到使用HTML模板来构建HTML数据更方便灵活，网易的确是使用了模板，他是怎么使用的呢？
+
+content_template.html就是它的模板，短短几行，简单强大。乍一看语法有点乱，他是使用了MGTemplateEngine（http://mattgemmell.com/mgtemplateengine-for-iphone/）库，MGTemplateEngine制定了简单的语法。
+
+使用的时候填充好数据，输出的结果就是格式化好的HTML。
+
+### 四.其他
+
+js与oc交互神马的，看下js文件就明白了。
+
