@@ -26,6 +26,63 @@ ImageView不要计算圆角，让设计师再给出张空心圆角图，圆角�
 
 还得让设计师出张高亮图，就是把上面白色区域替换成高亮色，Cell默认按下色是（127,127,127）。
 
+实现代码：
+{% highlight cpp %}
+@interface HGRoundCornerImageView : UIImageView
+
+@property (nonatomic, strong, readonly) UIImageView *coverImageView;
+
+- (void)setImageWithURL:(NSURL *)url placeholderImage:(UIImage *)placeholderImage;
+
+@end
+
+@interface HGRoundCornerImageView()
+
+@property (nonatomic, strong, readwrite) UIImageView *coverImageView;
+
+@end
+
+@implementation HGRoundCornerImageView
+
+- (id)initWithCoder:(NSCoder *)aDecoder
+{
+    if (self = [super initWithCoder:aDecoder]) {
+        [self commonInit];
+    }
+    return self;
+}
+
+- (id)initWithFrame:(CGRect)frame {
+    if (self = [super initWithFrame:frame]) {
+        [self commonInit];
+    }
+   
+    return self;
+}
+
+- (void)commonInit {
+    self.contentMode = UIViewContentModeScaleAspectFit;
+   
+    _coverImageView = [[UIImageView alloc] initWithFrame:self.bounds];
+    _coverImageView.contentMode = UIViewContentModeScaleAspectFit;
+    [self addSubview:_coverImageView];
+}
+
+- (void)setImageWithURL:(NSURL *)url placeholderImage:(UIImage *)placeholderImage
+{
+    [self sd_setImageWithURL:url placeholderImage:placeholderImage];     // 这里使用到了SDWebImageView
+}
+
+- (void)layoutSubviews
+{
+    [super layoutSubviews];
+    _coverImageView.frame = self.bounds;
+}
+
+@end
+
+{% endhighlight %}
+
 
 ###需要注意的地方
 Cell里：
