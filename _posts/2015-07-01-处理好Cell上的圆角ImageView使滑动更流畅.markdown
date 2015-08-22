@@ -1,7 +1,7 @@
 ---
 layout: post
 date:   2015-07-01 19:14
-categories: OS
+categories: IOS
 ---
 
 常常有将ImageView设置成圆角的需求，很常见的就是头像。通常用代码生成圆角：
