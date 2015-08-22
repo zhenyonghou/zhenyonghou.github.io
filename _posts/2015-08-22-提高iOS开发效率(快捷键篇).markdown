@@ -1,0 +1,59 @@
+---
+layout: post
+date:   2015-08-22 14:51
+categories: IOS
+---
+
+工欲善其事，必先利其器，介绍下Xcode的快捷键.
+
+### 切换.h/.m文件
+
+Ctrl+Command+上下箭头
+
+
+### 移动光标到行首、行尾
+
+Command+左右方向键
+
+
+### 移动光标到文件首、尾
+
+Command+上下方向键
+
+
+### 删除一行中光标前面内容（Delete to Beginning of Line）
+
+command + BackSpace
+
+
+### 删除一行中光标后面内容（Delete to End of Line）
+
+command + Delete
+
+
+### 格式化代码
+
+Ctrl+i 
+
+
+### 工程窗口间切换
+
+command + ~
+
+
+### 前进或后退导航
+
+Ctrl+Command+左右方向键
+
+### 在左侧Navigator栏中定位到当前文件
+
+Command+Shift+j
+
+
+
+------
+
+作者 [侯振永][1]     
+写于2015 年 8月 22日
+
+[1]: https://zhenyonghou.github.io/
