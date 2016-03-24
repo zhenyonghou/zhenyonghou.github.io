@@ -8,9 +8,6 @@ Events类在backbone库中扮演着很重要的角色，backbone的View与Model�
 
 目前项目中使用到的backbone是v1.1.2版，下面的代码分析也是基于此版本。也去backbone网站下载了最新的v1.3.2，代码复杂了些，基本的原理还是一样的。
 
-Events提供的方法：
-
-on,off,trigger,once,listenTo,stopListening,listenToOnce
 
 这里重点介绍前面3个方法。
 
