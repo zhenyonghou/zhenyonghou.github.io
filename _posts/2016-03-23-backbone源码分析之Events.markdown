@@ -145,7 +145,7 @@ var triggerEvents = function(events, args) {
 
 了解到标记-清除算法是浏览器帮着做的，这下放心点了。
 
-关于Event的这种实现机制其它语言也有很多库这么做，C++有一些开源的callback库和single/slot库，iOS上类似机制苹果也提供了。一般都通过弱引用的方式解决循环引用问题，javascript不支持弱引用，hold不住的内存问题只能交给浏览器了。
+其它语言也有很多库用相似的方法实现了事件通知机制，C++和objective-c通过弱引用的方式解决循环引用问题，javascript不支持弱引用，hold不住的内存问题只能交给浏览器了。
 
 
 ------
