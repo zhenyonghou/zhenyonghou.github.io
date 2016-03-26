@@ -6,7 +6,7 @@ categories: blog
 
 Events类在backbone库中扮演着很重要的角色，backbone的View与Model都用到了它。
 
-目前项目中使用到的backbone是v1.1.2版，下面的代码分析也是基于此版本。也去backbone网站下载了最新的v1.3.2，代码复杂了些，基本的原理还是一样的。
+目前项目中使用到的backbone是v1.1.2版，下面的代码分析也是基于此版本。也去backbone网站下载了最新的v1.3.2看，加入了新方法，代码复杂了些，核心的东西还是一样的。
 
 Events提供的方法：
 
@@ -134,25 +134,20 @@ var triggerEvents = function(events, args) {
 - callback执行顺序按照监听顺序。
 - callback参数个数有限制，最多支持3个。
 
-也很容易想到即将要发生的内存问题：
+还有很重要的一点：上面的实现会导致循环引用，比如on/off方法没成对调用等情况。一直认为javascript是引用计数来管理内存的，但不支持弱引用。谨慎起见，还得再了解下javascript的内存管理方式。
 
-1、假如只调用了on方法，没调用off方法，由于强引用，会有导致内存很难被释放的情况？
+在这里找到了介绍javascript管理内存的方法：https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Memory_Management
 
-2、使用不当会引起循环引用。
-
-因为印象中javascript内存管理是靠引用计数来的，那么肯定会有以上的问题，谨慎起见，还得再了解下javascript的内存管理方式：
+里面讲了两点：
 
 - 引用计数垃圾收集
 
 - 标记-清除算法
 
-参考：https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Memory_Management
 
-标记-清除算法是浏览器帮着做的，这下放心多了。
+了解到标记-清除算法是浏览器帮着做的，这下放心点了。
 
-题外话：
-
-用类似的思想其它语言上也有很多实现，C++有一些开源的callback库和single/slot库，iOS的KVO和notification机制等等。这些语言都支持引用计数，但后者支持弱引用，保证了内存问题，javascript不支持弱引用，hold不住的内存问题得交给浏览器了。
+关于Event的这种实现机制其它语言也有很多库这么做，C++有一些开源的callback库和single/slot库，iOS上类似机制苹果也提供了。一般都通过弱引用的方式解决循环引用问题，javascript不支持弱引用，hold不住的内存问题只能交给浏览器了。
 
 
 ------
