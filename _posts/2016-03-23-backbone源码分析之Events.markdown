@@ -136,9 +136,7 @@ var triggerEvents = function(events, args) {
 
 还有很重要的一点：上面的实现会导致循环引用，比如on/off方法没成对调用等情况。一直认为javascript是引用计数来管理内存的，但不支持弱引用。谨慎起见，还得再了解下javascript的内存管理方式。
 
-在这里找到了介绍javascript管理内存的方法：https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Memory_Management
-
-里面讲了两点：
+在[这里](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Memory_Management)找到了介绍javascript管理内存的方法，里面讲了两点：
 
 - 引用计数垃圾收集
 
