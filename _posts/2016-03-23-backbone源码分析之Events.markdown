@@ -6,7 +6,7 @@ categories: blog
 
 Events类在backbone库中扮演着很重要的角色，backbone的View与Model都用到了它。
 
-目前项目中使用到的backbone是v1.1.2版，下面的代码分析也是基于此版本。官网最新的v1.3.2看，加入了新方法，代码复杂了些，核心的东西还是一样的。
+目前项目中使用到的backbone是v1.1.2版，下面的代码分析也是基于此版本。官网最新版是v1.3.2，相比较多了几个方法，核心的东西还是一样的。
 
 Events提供的方法：
 
@@ -152,6 +152,7 @@ var triggerEvents = function(events, args) {
 了解到`标记-清除算法`是浏览器帮着做的，这下放心点了。
 
 其它语言也有很多库用相似的方法实现了事件通知机制，C++和objective-c通过弱引用的方式解决循环引用问题，javascript不支持弱引用，hold不住的内存问题只能交给浏览器了。
+
 
 
 ------
