@@ -29,14 +29,13 @@ on: function(name, callback, context) {
 
 {% endhighlight %}
 
-首先调用eventsApi方法。
 
 我们看到内部维护着event map，名为_events。map的key是事件名，也就是传进来的参数name；map的value是一个数组，输入参数callback和context组成一个成员。
 
 到这里，大概也就明白Events的实现机制了。
 
 
-关于eventsApi方法，只有在name是object或是有空格分割的事件时才有用，留意一下它的牛逼写法：
+关于on方法里调用的eventsApi，只有在name是object或是有空格分割的事件时才有用，留意一下它的牛逼写法：
 
 {% highlight javascript %}
 
