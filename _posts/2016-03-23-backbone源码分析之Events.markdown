@@ -6,7 +6,7 @@ categories: blog
 
 Events类在backbone库中扮演着很重要的角色，backbone的View与Model都用到了它。
 
-目前项目中使用到的backbone是v1.1.2版，下面的代码分析也是基于此版本。也去backbone网站下载了最新的v1.3.2看，加入了新方法，代码复杂了些，核心的东西还是一样的。
+目前项目中使用到的backbone是v1.1.2版，下面的代码分析也是基于此版本。官网最新的v1.3.2看，加入了新方法，代码复杂了些，核心的东西还是一样的。
 
 Events提供的方法：
 
@@ -29,7 +29,14 @@ on: function(name, callback, context) {
 
 {% endhighlight %}
 
-首先调用eventsApi方法，关于eventsApi方法，只有在name是object或是有空格分割的事件时才有用，留意一下它的牛逼写法：
+首先调用eventsApi方法。
+
+我们看到内部维护着event map，名为_events。map的key是事件名，也就是传进来的参数name；map的value是一个数组，输入参数callback和context组成一个成员。
+
+到这里，大概也就明白Events的实现机制了。
+
+
+关于eventsApi方法，只有在name是object或是有空格分割的事件时才有用，留意一下它的牛逼写法：
 
 {% highlight javascript %}
 
@@ -39,10 +46,6 @@ for (var key in name) {
 ...
 
 {% endhighlight %}
-
-我们看到内部维护着event map，名为_events。map的key是事件名，也就是传进来的参数name；map的value是一个数组，输入参数callback和context组成一个成员。
-
-到这里，大概也就明白Events的实现机制了。
 
 
 
@@ -126,7 +129,8 @@ var triggerEvents = function(events, args) {
 可以看到，队列里callback一一执行，需要注意的是，callback最多支持3个参数。
 
 
-———————— 分割线 ————————
+
+### 总结
 
 通过代码了解到这些：
 
@@ -134,7 +138,9 @@ var triggerEvents = function(events, args) {
 - callback执行顺序按照监听顺序。
 - callback参数个数有限制，最多支持3个。
 
-还有很重要的一点：上面的实现会导致循环引用，比如on/off方法没成对调用等情况。一直认为javascript是引用计数来管理内存的，但不支持弱引用。谨慎起见，还得再了解下javascript的内存管理方式。
+还有很重要的一点：上面的实现会导致循环引用！比如on/off方法没成对调用等情况。
+
+一直认为javascript是引用计数来管理内存的。谨慎起见，还得再了解下javascript的内存管理方式。
 
 在[这里](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Memory_Management)找到了介绍javascript管理内存的方法，里面讲了两点：
 
