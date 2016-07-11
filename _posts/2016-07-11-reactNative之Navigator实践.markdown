@@ -1,6 +1,6 @@
 ---
 layout: post
-date:   2016-07-11 22:58
+date:   2016-07-10 22:58
 categories: blog
 ---
 
@@ -40,16 +40,27 @@ configureScene: PropTypes.func
 
 
 可用的scene configuration object：
+
 - Navigator.SceneConfigs.PushFromRight (default)
+
 - Navigator.SceneConfigs.FloatFromRight
+
 - Navigator.SceneConfigs.FloatFromLeft
+
 - Navigator.SceneConfigs.FloatFromBottom
+
 - Navigator.SceneConfigs.FloatFromBottomAndroid
+
 - Navigator.SceneConfigs.FadeAndroid
+
 - Navigator.SceneConfigs.HorizontalSwipeJump
+
 - Navigator.SceneConfigs.HorizontalSwipeJumpFromRight
+
 - Navigator.SceneConfigs.VerticalUpSwipeJump
+
 - Navigator.SceneConfigs.VerticalDownSwipeJump
+
 
 一个简单的示例：
 
@@ -162,21 +173,21 @@ Navigator的使用很简单，不多说了，提供了几个很容易理解的�
 
 ### 三. 遇到过的问题：
 
-1. NavigationBar的问题
+##### 1. NavigationBar的问题
 
 Navigator提供了NavigationBar，但要在App里使用的话会遇到各种麻烦，建议还是自己写个NavigationBar，贴到每个页面的顶部。
 
 关于NavigationBar上的返回箭头旁边的上一页名称，可以通过参数传递统一解决好。
 
-2. 使用不同的转场方式
+##### 2. 使用不同的转场方式
 
 上面已经提到了解决办法。
 
-3. 页面间参数如何传递
+##### 3. 页面间参数如何传递
 
 上面已经提到了解决办法。
 
-4. 转场时不要转场动画
+##### 4. 转场时不要转场动画
 
 未解决，如果你有解决方法，告诉我。
 
