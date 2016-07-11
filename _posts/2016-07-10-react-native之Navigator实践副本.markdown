@@ -181,9 +181,6 @@ Navigator提供了NavigationBar，但要在App里使用的话会遇到各种麻�
 未解决，如果你有解决方法，告诉我。
 
 
-这里有一份代码可参考：
-https://github.com/zhenyonghou/TabNavi.git
-
 ------
 
 作者 [侯振永][1]     
