@@ -4,14 +4,14 @@ date:   2016-07-10 23:00
 categories: blog
 ---
 
-  如今市面上的App绝大多数都是Tabbar结构的，Tabbar管理着几个模块，当push进入下一个页面时Tabbar被覆盖，我近几年开发过的App也基本上都是这样的。
+如今市面上的App绝大多数都是Tabbar结构的，Tabbar管理着几个模块，当push进入下一个页面时Tabbar被覆盖，我近几年开发过的App也基本上都是这样的。
 
-首先得解决好Tabbar和Navigation的关系，如果开始这个没处理好，后面处理跳转关系时将会痛苦不堪（我接手别人的项目时有过亲身体验，一种解铃还须系铃人的感觉）。在iOS上我早就有了比较优雅的解决方案。
+问题来了，首先得解决好Tabbar和Navigation的关系，如果开始这个没处理好，后面处理跳转关系时将会痛苦不堪（我接手一个项目时候体会过，一种解铃还须系铃人的感觉）。在iOS上纯代码实现我早就有了比较优雅的解决方案。
 
 现在开发React Native应用也得首先解决掉它，解决一次，以后开发其它App时就可以照搬了。
 
 
-### Navigation的选择：
+### 1. Navigation的选择：
 
 ReactNative库里提供了Navigation相关的几个组件：
 - Navigator
@@ -26,9 +26,10 @@ ReactNative库里提供了Navigation相关的几个组件：
 
 按照在iOS上的使用经验，NavigationBar是公用的，Navigator正好也提供了NavigationBar，于是根据在iOS上的解决方案，使用了Navigator的NavigationBar，发现跳转关系维护起来太麻烦，原因是在iOS上苹果已经为我们解决好了一些问题，而Web版得自己解决。
 
-经过搜索其它项目的代码，发现每个页面上放置一个NavigationBar的策略（这个策略非常容易想到，可我陷入了Native的使用经验中）。遗憾的是采用这种方案的话转场的动画效果肯定不是原生的那样了，这个可以先忍，于是自己写了个NavigationBar，贴到每个需要的页面上。
+经过搜索其它项目的代码，发现每个页面上放置一个NavigationBar的方法（这个非常容易想到，可我陷入了Native的使用经验中）。遗憾的是采用这种方案的话转场的动画效果肯定不是原生的那样了，这个可以先忍，于是自己写了个NavigationBar，贴到每个需要的页面上。
 
-### Tab方案库的选择：
+
+### 2. Tab方案库的选择：
 
 由于官方只有TabBarIOS，原因是Android上没有TabBar所以官方没提供。于是找到了react-native-tab-navigator
 
@@ -36,7 +37,8 @@ https://github.com/exponentjs/react-native-tab-navigator
 
 它是iOS和Android平台通用的TabControl解决方案，问题解决得很到位，一般的开发用它就足够了。对于初学者，看看它源码收获也挺多。
 
-### Tab与Navigator的结合：
+
+### 3. Tab与Navigator的结合：
 
 现实是，TabBar管理着3个页面，要让push进来新的子页面覆盖住TabBar。
 
