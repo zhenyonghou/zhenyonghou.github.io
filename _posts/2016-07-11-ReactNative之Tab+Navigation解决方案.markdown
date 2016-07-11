@@ -4,17 +4,29 @@ date:   2016-07-10 23:00
 categories: blog
 ---
 
-如今市面上的App绝大多数都是Tabbar形式的，进入App之后首先看到Tabbar管理着几个模块，当push进入下一个页面时Tabbar被覆盖，我近几年开发过的App也基本上都是这样的。
-开发这样的App首先得解决好Tabbar和Navigation的关系，如果开始这个没处理好，后面处理跳转关系时将会痛苦不堪（我接手别人的项目时有过亲身体验，一种解铃还须系铃人的感觉）。在iOS上我早就有了比较优雅的解决方案。
+  如今市面上的App绝大多数都是Tabbar结构的，Tabbar管理着几个模块，当push进入下一个页面时Tabbar被覆盖，我近几年开发过的App也基本上都是这样的。
+
+首先得解决好Tabbar和Navigation的关系，如果开始这个没处理好，后面处理跳转关系时将会痛苦不堪（我接手别人的项目时有过亲身体验，一种解铃还须系铃人的感觉）。在iOS上我早就有了比较优雅的解决方案。
+
 现在开发React Native应用也得首先解决掉它，解决一次，以后开发其它App时就可以照搬了。
 
 
 ### Navigation的选择：
 
 ReactNative库里提供了Navigation相关的几个组件：
-Navigator、NavigatorIOS、NavigationExperimental，这么多，选哪个呀？ 首先因为要跨平台原因NavigatorIOS被排除，然后是NavigationExperimental还没正式上官方文档，排除。看了Navigator的使用方法，就选择了Navigator。
+- Navigator
+- NavigatorIOS
+- NavigationExperimental
 
-还遇到个NavigationBar的问题，按照在iOS上的使用经验，NavigationBar是公用的，Navigator正好也提供了NavigationBar，于是根据在iOS上的解决方案，使用了Navigator的NavigationBar，发现跳转关系维护起来太麻烦，原因是在iOS上苹果已经为我们解决好了一些问题，而Web版得自己解决。经过查看其它开源项目的代码，发现每个页面上放置一个NavigationBar控制比较方便，但是过渡效果肯定不是原生的那样了。最后还是自己写了个NavigationBar，贴到每个需要的页面上。
+如何选？ 
+
+首先因为要跨平台原因NavigatorIOS被排除，然后是NavigationExperimental还没正式上官方文档，排除。看了Navigator的使用方法，就选择了Navigator。
+
+讲下我遇到过的NavigationBar的问题
+
+按照在iOS上的使用经验，NavigationBar是公用的，Navigator正好也提供了NavigationBar，于是根据在iOS上的解决方案，使用了Navigator的NavigationBar，发现跳转关系维护起来太麻烦，原因是在iOS上苹果已经为我们解决好了一些问题，而Web版得自己解决。
+
+经过搜索其它项目的代码，发现每个页面上放置一个NavigationBar的策略（这个策略非常容易想到，可我陷入了Native的使用经验中）。遗憾的是采用这种方案的话转场的动画效果肯定不是原生的那样了，这个可以先忍，于是自己写了个NavigationBar，贴到每个需要的页面上。
 
 ### Tab方案库的选择：
 
@@ -99,6 +111,9 @@ export default class AppTabContainer extends Component {
 
 Demo的源代码在这里：
 https://github.com/zhenyonghou/TabNavi.git
+
+（完）
+
 
 ------
 
