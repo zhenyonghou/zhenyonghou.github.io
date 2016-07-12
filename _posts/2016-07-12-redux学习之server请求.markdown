@@ -4,19 +4,21 @@ date:   2016-07-11 23:00
 categories: blog
 ---
 
+### 1. 介绍
+
 Middleware是用来处理发起action之后的动作的，当调用dispatch发起一个action的时候，会遍历Middleware链。Middleware能在reducer之前截获到自己关心的action并做一些处理。关于Middleware可以看这个教程：
 
 http://cn.redux.js.org/docs/advanced/Middleware.html
 
 
-serverAPI的工作：
+serverAPI是redux的Example中抽出来的代码，其完成的工作：
 
 1. 自身作为一个Middleware会被加入Middleware链，会判断action的SERVER_API标识，如果是属于SERVER_API的action，就处理，如果不是，放行。
 
 2. serverAPI使用fetch做异步请求，请求前发request action，获得服务器返回的结果后发起成功或失败的action。
 
 
-先看用法：
+### 2. 用法
 
 {% highlight javascript %}
 
@@ -51,7 +53,7 @@ const mapDispatchToProps = (dispatch, ownProps) => {
 注意[SERVER_API]的写法，后面的实现中这么用的：action[SERVER_API] 获取action数据。
 
 
-代码实现以及解读：
+### 3. 代码解读：
 
 {% highlight javascript %}
 
@@ -60,8 +62,6 @@ function callServerApi(url, param, method, normalizeFunc) {
     .then(response =>
       response.json().then(json => ({ json, response }))
     ).then(({ json, response }) => {
-      // console.log('response=', response);
-      // console.log('json=', json);
       if (!response.ok || json.ret !== 1) {
         return Promise.reject(json);
       }
