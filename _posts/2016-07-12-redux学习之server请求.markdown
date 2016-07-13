@@ -102,7 +102,7 @@ export default store => next => action => {     // middleware都这样写，里�
   }
   function actionWith(data) {
     const finalAction = Object.assign({}, action, data)
-    delete finalAction[SERVER_API]                                 // 注意，这里移除了[SERVER_API]数据，而且必须要移除，否则会造成死循环
+    delete finalAction[SERVER_API]                                 // 注意，这里移除了[SERVER_API]数据，原因是这些数据已经没用了
     return finalAction
   }
   const [ requestType, successType, failureType ] = types          // types是一组action的type，包含这3个type。
