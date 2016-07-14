@@ -6,19 +6,30 @@ categories: blog
 
 ### 1. 介绍
 
-Middleware是用来处理发起action之后的动作的，当调用dispatch发起一个action的时候，会遍历Middleware链。Middleware能在reducer之前截获到自己关心的action并做一些处理。关于Middleware可以看这个教程：
+在redux的Example代码中有个网络请求的serverAPI，本文是讲解一下serverAPI。
 
-http://cn.redux.js.org/docs/advanced/Middleware.html
-
-
-serverAPI是redux的Example中抽出来的代码，其完成的工作：
+serverAPI的工作：
 
 1. 自身作为一个Middleware会被加入Middleware链，会判断action的SERVER_API标识，如果是属于SERVER_API的action，就处理，如果不是，放行。
 
 2. serverAPI使用fetch做异步请求，请求前发request action，获得服务器返回的结果后发起成功或失败的action。
 
 
-### 2. 用法
+Middleware是啥？
+
+Middleware是用来处理发起action之后的动作的，当调用dispatch发起一个action的时候，会遍历Middleware链。Middleware能在reducer之前截获到自己关心的action并做一些处理。关于Middleware可以看这个教程：
+
+http://cn.redux.js.org/docs/advanced/Middleware.html
+
+
+
+### 2. 构造个serverAPI能处理的网络请求
+
+先来看看如何向服务器端发送请求的。下面fetchUserinfo请求为例。fetchUserinfo()是个action，请求接口的时候会dispatch(fetchUserinfo())。
+
+SERVER_API是个Symbol，后面会看到。
+
+types, url, param, method, normalizeFunc是必须要有的，serverAPI会处理这些。
 
 {% highlight javascript %}
 
@@ -30,7 +41,7 @@ export function fetchUserinfo() {
       types: [ActionType.USERINFO_REQUEST, ActionType.USERINFO_SUCCESS, ActionType.USERINFO_FAILURE],
       url: config.apiDomain + '/account/userinfo',
       param: JSON.stringify({
-        token: window.xu.cookie.get('token') || config.testToken
+        token: config.testToken
       }),
       method: 'POST',
       normalizeFunc: json => json
@@ -53,7 +64,7 @@ const mapDispatchToProps = (dispatch, ownProps) => {
 注意[SERVER_API]的写法，后面的实现中这么用的：action[SERVER_API] 获取action数据。
 
 
-### 3. 代码解读：
+### 3. serverAPI中间件
 
 {% highlight javascript %}
 
